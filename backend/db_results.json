@@ -1,0 +1,32 @@
+{
+  "dbName": "test",
+  "collections": [
+    "nutritions",
+    "dietplans",
+    "users",
+    "progressphotos",
+    "challenges",
+    "messages",
+    "activities"
+  ],
+  "activityCount": 12,
+  "lastActivity": {
+    "exerciseDetails": {
+      "name": "Push-ups",
+      "reps": 20,
+      "sets": 1,
+      "weight": 70,
+      "restTime": 60,
+      "notes": "Felt strong today"
+    },
+    "_id": "697c4c560662ee20c8897c94",
+    "user": "696d9f60c0dab1062d1ee90e",
+    "type": "exercise",
+    "value": 10,
+    "date": "2026-01-30T06:14:46.669Z",
+    "createdAt": "2026-01-30T06:14:46.672Z",
+    "updatedAt": "2026-01-30T06:14:46.672Z",
+    "__v": 0
+  },
+  "activitySchemaCollection": "activities"
+}

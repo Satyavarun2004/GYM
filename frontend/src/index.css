@@ -1,0 +1,174 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", "Inter", "sans-serif";
+
+  --color-primary-light: #8B5CF6;
+  --color-primary: #7C3AED;
+  --color-primary-dark: #6D28D9;
+
+  --color-secondary-light: #F472B6;
+  --color-secondary: #EC4899;
+  --color-secondary-dark: #DB2777;
+
+  --color-dark-bg: #020617;
+  --color-dark-card: #0f172a;
+  --color-dark-surface: #1e293b;
+  --color-dark-text: #f8fafc;
+  --color-dark-muted: #94a3b8;
+
+  --shadow-glow: 0 0 20px -5px rgba(139, 92, 246, 0.5);
+  --shadow-glow-purple: 0 0 20px -5px rgba(139, 92, 246, 0.5);
+  --shadow-glow-pink: 0 0 20px -5px rgba(244, 114, 182, 0.5);
+
+  --animate-live-pulse: live-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-gradient-x: gradient-x 3s ease infinite;
+
+  @keyframes gradient-x {
+    0% {
+      background-position: 0% 50%;
+    }
+
+    50% {
+      background-position: 100% 50%;
+    }
+
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  @keyframes live-pulse {
+
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    50% {
+      opacity: 0.7;
+      transform: scale(0.95);
+    }
+  }
+
+  @keyframes float {
+
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-dark-bg text-dark-text font-sans antialiased selection:bg-primary/30;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-dark-bg;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-dark-card rounded-full border-2 border-dark-bg hover:bg-white/10 transition-colors;
+}
+
+.glass-card {
+  @apply bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl;
+}
+
+.glass-card-hover {
+  @apply hover:bg-white/[0.06] hover:border-white/20 transition-all duration-500;
+}
+
+.btn-primary {
+  @apply bg-gradient-to-r from-primary to-secondary text-white px-8 py-4 rounded-2xl font-bold tracking-wide hover:shadow-glow-purple transition-all duration-500 transform hover:-translate-y-1 active:scale-95;
+}
+
+.input-field {
+  @apply w-full bg-dark-surface/50 border border-white/5 rounded-xl px-4 py-3.5 text-white placeholder:text-dark-muted focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all duration-300;
+}
+
+.text-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-light via-secondary-light to-primary-light bg-[length:200%_auto] animate-gradient-x;
+}
+
+.shadow-glow-purple {
+  @apply shadow-glow-purple;
+}
+
+.shadow-glow-blue {
+  box-shadow: 0 0 40px -10px rgba(59, 130, 246, 0.6);
+}
+
+.shadow-glow-pink {
+  @apply shadow-glow-pink;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-live-pulse {
+  animation: live-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.cyber-grid {
+  background-image:
+    linear-gradient(rgba(139, 92, 246, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.scanline {
+  width: 100%;
+  height: 2px;
+  background: rgba(139, 92, 246, 0.1);
+  opacity: 0.1;
+  position: absolute;
+  bottom: 100%;
+  animation: scanline 10s linear infinite;
+}
+
+@keyframes scanline {
+  0% {
+    bottom: 100%;
+  }
+
+  100% {
+    bottom: 0%;
+  }
+}
+
+.cyber-grid-small {
+  background-image:
+    linear-gradient(rgba(139, 92, 246, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.02) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.neon-pulse {
+  animation: neon-pulse 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes neon-pulse {
+  from {
+    box-shadow: 0 0 5px rgba(139, 92, 246, 0.2), 0 0 10px rgba(139, 92, 246, 0.1);
+  }
+
+  to {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.4), 0 0 30px rgba(139, 92, 246, 0.2);
+  }
+}
