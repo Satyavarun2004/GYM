@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Trophy, Activity, Award, LogOut, Menu, X, Zap, MessageCircle, Dumbbell, TrendingUp, Star, History } from 'lucide-react';
+import { Home, Trophy, Activity, Award, LogOut, Menu, X, Zap, MessageCircle, Dumbbell, TrendingUp, Star, History, Bot } from 'lucide-react';
 import { useContext, useState } from 'react';
 import AuthContext from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,6 +23,7 @@ const Sidebar = () => {
         { name: 'Challenges', icon: Trophy, path: '/challenges' },
         { name: 'Log Activity', icon: Activity, path: '/activity' },
         { name: 'Exercises', icon: Dumbbell, path: '/exercises' },
+        { name: 'AI Coach', icon: Bot, path: '/ai-coach' },
         { name: 'Leaderboard', icon: Award, path: '/leaderboard' },
         ...(user?.role === 'admin' ? [{ name: 'Admin Chat', icon: MessageCircle, path: '/admin-chat' }] : []),
     ];

@@ -17,6 +17,7 @@ import ExerciseList from './pages/Exercises/ExerciseList';
 import Analytics from './pages/Analytics';
 import Achievements from './pages/Achievements';
 import History from './pages/History';
+import AIWorkoutGenerator from './pages/AIWorkoutGenerator';
 
 import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
@@ -43,6 +44,7 @@ function App() {
                 <Route path="/exercises" element={<ExerciseLibrary />} />
                 <Route path="/exercises/:bodyPart" element={<ExerciseList />} />
                 <Route path="/leaderboard" element={<Leaderboard />} />
+                <Route path="/ai-coach" element={<AIWorkoutGenerator />} />
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/achievements" element={<Achievements />} />
                 <Route path="/history" element={<History />} />

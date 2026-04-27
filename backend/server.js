@@ -38,6 +38,7 @@ app.use('/api/nutrition', require('./routes/nutritionRoutes'));
 app.use('/api/photos', require('./routes/progressPhotoRoutes'));
 app.use('/api/weight', require('./routes/weightRoutes'));
 app.use('/api/badges', require('./routes/badgeRoutes'));
+app.use('/api/workout-plans', require('./routes/workoutPlanRoutes'));
 
 // Socket.io Logic
 io.on('connection', (socket) => {
