@@ -1,12 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import api from '../api/axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity as ActivityIcon, Save, Dumbbell, History, Zap, Timer as TimerIcon, ChevronRight, Trash2 } from 'lucide-react';
+import { Activity as ActivityIcon, Save, Dumbbell, History, Zap, Timer as TimerIcon, ChevronRight, Trash2, Camera } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import { useLocation } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import WorkoutTimer from '../components/WorkoutTimer';
+import VisionLens from '../components/VisionLens';
+import LivePeers from '../components/LivePeers';
+import AuthContext from '../context/AuthContext';
+
+const socket = io('http://localhost:5000');
 
 const Activity = () => {
+    const { user } = useContext(AuthContext);
     const location = useLocation();
     const [type, setType] = useState('steps');
     const [value, setValue] = useState('');
@@ -21,6 +28,24 @@ const Activity = () => {
     const [showTimer, setShowTimer] = useState(false);
     const [recentActivities, setRecentActivities] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(true);
+    const [showVision, setShowVision] = useState(false);
+
+    useEffect(() => {
+        if (type === 'exercise' && name) {
+            socket.emit('workout_start', { userId: user?._id || 'guest', exerciseName: name });
+        }
+    }, [type, name, user]);
+
+    useEffect(() => {
+        if (type === 'exercise' && (reps || sets)) {
+            socket.emit('workout_update', {
+                userId: user?._id || 'guest',
+                exerciseName: name,
+                reps: parseInt(reps) || 0,
+                sets: parseInt(sets) || 0
+            });
+        }
+    }, [reps, sets, type, name, user]);
 
     const fetchRecentActivities = async () => {
         try {
@@ -30,6 +55,12 @@ const Activity = () => {
             console.error('Failed to fetch activities:', error);
         } finally {
             setLoadingHistory(false);
+        }
+    };
+
+    const handleRepCount = (count) => {
+        if (type === 'exercise') {
+            setReps(count.toString());
         }
     };
 
@@ -254,6 +285,42 @@ const Activity = () => {
                         </AnimatePresence>
 
                         <div className="glass-card p-6 border-white/5 bg-gradient-to-br from-primary/10 to-transparent">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-4">
+                                    <Camera className="text-primary-light" size={24} />
+                                    <h4 className="font-bold uppercase tracking-widest text-sm text-white">Vision AI Assist</h4>
+                                </div>
+                                <button
+                                    onClick={() => setShowVision(!showVision)}
+                                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${showVision ? 'bg-primary text-white' : 'bg-white/5 text-dark-muted hover:bg-white/10'
+                                        }`}
+                                >
+                                    {showVision ? 'Deactivate' : 'Enable'}
+                                </button>
+                            </div>
+                            <p className="text-[10px] text-dark-muted font-bold uppercase tracking-wider leading-relaxed">
+                                {showVision ? 'AI Lens is active. Calibrating skeletal tracking...' : 'Get real-time posture feedback while you train.'}
+                            </p>
+                        </div>
+
+                        <AnimatePresence>
+                            {showVision && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20, height: 0 }}
+                                    animate={{ opacity: 1, y: 0, height: 'auto' }}
+                                    exit={{ opacity: 0, y: 20, height: 0 }}
+                                    className="overflow-hidden"
+                                >
+                                    <VisionLens
+                                        isCompact={true}
+                                        onDeactivate={() => setShowVision(false)}
+                                        onRepCount={handleRepCount}
+                                    />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        <div className="glass-card p-6 border-white/5 bg-gradient-to-br from-primary/10 to-transparent">
                             <div className="flex items-center gap-4 mb-4">
                                 <Dumbbell className="text-primary-light" size={24} />
                                 <h4 className="font-bold uppercase tracking-widest text-sm">Professional Entry</h4>
@@ -301,6 +368,7 @@ const Activity = () => {
                                 )}
                             </div>
                         </div>
+                        <LivePeers currentUser={user} />
                     </div>
                 </div>
             </div>

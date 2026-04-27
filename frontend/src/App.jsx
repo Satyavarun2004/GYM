@@ -15,46 +15,47 @@ import AdminChat from './pages/AdminChat';
 import ExerciseLibrary from './pages/Exercises/ExerciseLibrary';
 import ExerciseList from './pages/Exercises/ExerciseList';
 import Analytics from './pages/Analytics';
-import Gallery from './pages/Gallery';
 import Achievements from './pages/Achievements';
 import History from './pages/History';
 
 import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Public Landing Page */}
-          <Route path="/" element={<Home />} />
+      <ErrorBoundary>
+        <Router>
+          <Routes>
+            {/* Public Landing Page */}
+            <Route path="/" element={<Home />} />
 
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-          <Route element={<ProtectedRoute />}>
-            <Route element={<Layout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/challenges" element={<ChallengeList />} />
-              <Route path="/challenges/create" element={<CreateChallenge />} />
-              <Route path="/activity" element={<Activity />} />
-              <Route path="/exercises" element={<ExerciseLibrary />} />
-              <Route path="/exercises/:bodyPart" element={<ExerciseList />} />
-              <Route path="/leaderboard" element={<Leaderboard />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/gallery" element={<Gallery />} />
-              <Route path="/achievements" element={<Achievements />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/admin-chat" element={<AdminChat />} />
-              <Route path="/profile" element={<div className="text-center p-10">Profile Coming Soon</div>} />
+            <Route element={<ProtectedRoute />}>
+              <Route element={<Layout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/challenges" element={<ChallengeList />} />
+                <Route path="/challenges/create" element={<CreateChallenge />} />
+                <Route path="/activity" element={<Activity />} />
+                <Route path="/exercises" element={<ExerciseLibrary />} />
+                <Route path="/exercises/:bodyPart" element={<ExerciseList />} />
+                <Route path="/leaderboard" element={<Leaderboard />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="/achievements" element={<Achievements />} />
+                <Route path="/history" element={<History />} />
+                <Route path="/admin-chat" element={<AdminChat />} />
+                <Route path="/profile" element={<div className="text-center p-10">Profile Coming Soon</div>} />
+              </Route>
             </Route>
-          </Route>
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Router>
+      </ErrorBoundary>
     </AuthProvider>
   );
 }

@@ -19,8 +19,49 @@ const Register = () => {
     const navigate = useNavigate();
     const [error, setError] = useState('');
 
+    const validateForm = () => {
+        if (name.length < 2) {
+            setError('Name must be at least 2 characters');
+            return false;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            setError('Invalid email format');
+            return false;
+        }
+
+        // Password validation: 8+ chars, 1 upper, 1 lower, 1 number, 1 special char
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{8,}$/;
+        if (!passwordRegex.test(password)) {
+            setError('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character');
+            return false;
+        }
+
+        if (age < 13 || age > 120) {
+            setError('Age must be between 13 and 120');
+            return false;
+        }
+
+        if (height < 50 || height > 300) {
+            setError('Height must be between 50 and 300 cm');
+            return false;
+        }
+
+        if (weight < 30 || weight > 500) {
+            setError('Weight must be between 30 and 500 kg');
+            return false;
+        }
+
+        return true;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError('');
+
+        if (!validateForm()) return;
+
         try {
             await register({ name, email, password, role, age, experience, gender, height, weight, phoneNumber });
             navigate('/dashboard');

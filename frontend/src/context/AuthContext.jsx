@@ -8,11 +8,22 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const storedUser = JSON.parse(localStorage.getItem('user'));
-        if (storedUser) {
-            setUser(storedUser);
+        console.log('AuthContext: Initializing...');
+        try {
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+                console.log('AuthContext: Found stored user');
+                setUser(JSON.parse(storedUser));
+            } else {
+                console.log('AuthContext: No stored user found');
+            }
+        } catch (error) {
+            console.error('AuthContext: Failed to parse user from localStorage', error);
+            localStorage.removeItem('user');
+        } finally {
+            console.log('AuthContext: Loading finished');
+            setLoading(false);
         }
-        setLoading(false);
     }, []);
 
     const login = async (email, password) => {

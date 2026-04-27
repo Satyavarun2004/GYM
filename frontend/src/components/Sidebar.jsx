@@ -1,5 +1,5 @@
-import { Link, useLocation } from 'react-router-dom';
-import { Home, Trophy, Activity, Award, LogOut, Menu, X, Zap, MessageCircle, Dumbbell, TrendingUp, Camera, Star, History } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Home, Trophy, Activity, Award, LogOut, Menu, X, Zap, MessageCircle, Dumbbell, TrendingUp, Star, History } from 'lucide-react';
 import { useContext, useState } from 'react';
 import AuthContext from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,13 +7,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 const Sidebar = () => {
     const { user, logout } = useContext(AuthContext);
     const location = useLocation();
+    const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
+
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+    };
 
     const menuItems = [
         { name: 'Dashboard', icon: Home, path: '/dashboard' },
         { name: 'Analytics', icon: TrendingUp, path: '/analytics' },
         { name: 'Workout History', icon: History, path: '/history' },
-        { name: 'Gallery', icon: Camera, path: '/gallery' },
         { name: 'Achievements', icon: Star, path: '/achievements' },
         { name: 'Challenges', icon: Trophy, path: '/challenges' },
         { name: 'Log Activity', icon: Activity, path: '/activity' },
@@ -36,7 +41,7 @@ const Sidebar = () => {
                 </div>
             </div>
 
-            <nav className="flex-grow space-y-2 px-3">
+            <nav className="flex-grow space-y-2 px-3 overflow-y-auto custom-scrollbar">
                 {menuItems.map((item) => {
                     const isActive = location.pathname === item.path;
                     return (
@@ -77,7 +82,7 @@ const Sidebar = () => {
                 </div>
 
                 <button
-                    onClick={logout}
+                    onClick={handleLogout}
                     className="flex items-center gap-4 w-full px-4 py-4 rounded-2xl font-semibold text-red-400 hover:bg-red-500/10 transition-all duration-300 group"
                 >
                     <LogOut size={22} className="group-hover:translate-x-1 transition-transform" />

@@ -1,10 +1,15 @@
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Activity, Settings, Shield, AlertCircle, Trash2 } from 'lucide-react';
+import { Users, Activity, Settings, Shield, AlertCircle, Trash2, LogOut } from 'lucide-react';
 import PageTransition from '../../components/PageTransition';
 import { useEffect, useState } from 'react';
 import api from '../../api/axios';
+import { useContext } from 'react';
+import AuthContext from '../../context/AuthContext';
 
 const AdminDashboard = () => {
+    const { logout } = useContext(AuthContext);
+    const navigate = useNavigate();
     const [users, setUsers] = useState([]);
 
     useEffect(() => {
@@ -30,6 +35,11 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+    };
+
     return (
         <PageTransition>
             <div className="space-y-10 pb-10">
@@ -47,6 +57,13 @@ const AdminDashboard = () => {
                             Administrator Access
                         </span>
                     </div>
+                    <button
+                        onClick={handleLogout}
+                        className="p-2 rounded-xl bg-white/5 border border-white/10 text-red-400 hover:bg-red-500/10 transition-all"
+                        title="Sign Out"
+                    >
+                        <LogOut size={20} />
+                    </button>
                 </header>
 
                 {/* Admin Stats */}
@@ -104,8 +121,8 @@ const AdminDashboard = () => {
                                         <td className="py-4 px-4 text-dark-muted">{user.email}</td>
                                         <td className="py-4 px-4">
                                             <span className={`text-xs font-bold px-2 py-1 rounded-lg ${user.role === 'admin' ? 'bg-red-500/10 text-red-400' :
-                                                    user.role === 'trainer' ? 'bg-primary/10 text-primary-light' :
-                                                        'bg-white/5 text-dark-muted'
+                                                user.role === 'trainer' ? 'bg-primary/10 text-primary-light' :
+                                                    'bg-white/5 text-dark-muted'
                                                 }`}>
                                                 {user.role}
                                             </span>

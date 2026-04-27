@@ -70,11 +70,12 @@ const DashboardPersonalization = ({ dailyBurned = 0, dailyIntake = 0 }) => {
     const getPlan = () => {
         if (!user?.bmi) return null;
         const gender = user.gender?.toLowerCase() || 'male';
+        const safeGender = bmiPlans[gender] ? gender : 'male';
         let category = 'normal';
         if (user.bmi < 18.5) category = 'underweight';
         else if (user.bmi >= 25) category = 'obese';
 
-        return bmiPlans[gender][category];
+        return bmiPlans[safeGender][category];
     };
 
     const plan = getPlan();

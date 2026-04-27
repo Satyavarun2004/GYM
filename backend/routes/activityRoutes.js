@@ -4,6 +4,7 @@ const { protect } = require('../middleware/authMiddleware');
 const Activity = require('../models/Activity');
 const User = require('../models/User');
 const Challenge = require('../models/Challenge');
+const Clan = require('../models/Clan');
 
 // @desc    Log a new activity
 // @route   POST /api/activities
@@ -99,7 +100,63 @@ router.post('/', protect, async (req, res) => {
             }
         }
 
-        // Single save for all stat changes
+        // 4. Award Badges
+        const totalActivities = await Activity.countDocuments({ user: req.user._id });
+        const strengthSessions = await Activity.countDocuments({ user: req.user._id, type: 'exercise' });
+
+        const badgesToAward = [];
+        
+        // First Session
+        if (totalActivities === 1) {
+            const firstBlood = await Badge.findOne({ name: 'First Blood' });
+            if (firstBlood) badgesToAward.push(firstBlood._id);
+        }
+
+        // Iron Warrior
+        if (strengthSessions === 10) {
+            const ironWarrior = await Badge.findOne({ name: 'Iron Warrior' });
+            if (ironWarrior) badgesToAward.push(ironWarrior._id);
+        }
+
+        // Centurion
+        if (user.stats.currentStreak === 100) {
+            const centurion = await Badge.findOne({ name: 'Centurion' });
+            if (centurion) badgesToAward.push(centurion._id);
+        }
+
+        let totalXpGained = 0;
+        for (const badgeId of badgesToAward) {
+            const alreadyHas = user.badges.some(b => b.badge.toString() === badgeId.toString());
+            if (!alreadyHas) {
+                const bDetail = await Badge.findById(badgeId);
+                user.badges.push({ badge: badgeId });
+                totalXpGained += (bDetail?.points || 10);
+            }
+        }
+
+        user.experience = (user.experience || 0) + totalXpGained;
+        
+        // --- CLAN XP AGGREGATION ---
+        if (user.clan) {
+            let activityXp = 50; // Base XP for logging any activity
+            if (type === 'exercise') {
+                // Bonus for heavy volume: 1 XP per 50kg moved
+                const volume = (exerciseDetails?.weight || 0) * (exerciseDetails?.reps || 0) * (exerciseDetails?.sets || 0);
+                activityXp += Math.floor(volume / 50);
+            } else if (type === 'steps') {
+                activityXp += Math.floor(finalValue / 100); // 1 XP per 100 steps
+            }
+
+            user.clanContribution = (user.clanContribution || 0) + activityXp;
+            
+            // Update Clan totalXP
+            await Clan.findByIdAndUpdate(user.clan, {
+                $inc: { totalXP: activityXp }
+            });
+        }
+        // ---------------------------
+
+        // Single save for all stat and badge changes
         await user.save(); 
 
         res.status(201).json(activity);

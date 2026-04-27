@@ -5,21 +5,35 @@ import TrainerDashboard from './TrainerDashboard';
 import AdminDashboard from './AdminDashboard';
 
 const Dashboard = () => {
-    const { user } = useContext(AuthContext);
+    const auth = useContext(AuthContext);
+    const user = auth?.user;
 
-    // ProtectedRoute handles the null user check, but if we reach here with null user for some reason:
+    console.log('DashboardRouter: Entry', { hasUser: !!user, role: user?.role });
+
     if (!user) {
-        return <div className="text-white text-center mt-20">Loading Dashboard Data...</div>;
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-dark-bg text-white">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-sm font-bold uppercase tracking-widest opacity-50 text-gradient">Initializing Dashboard...</p>
+                </div>
+            </div>
+        );
     }
 
-    switch (user.role) {
-        case 'trainer':
-            return <TrainerDashboard />;
-        case 'admin':
-            return <AdminDashboard />;
-        case 'customer':
-        default:
-            return <CustomerDashboard />;
+    try {
+        switch (user.role) {
+            case 'trainer':
+                return <TrainerDashboard />;
+            case 'admin':
+                return <AdminDashboard />;
+            case 'customer':
+            default:
+                return <CustomerDashboard />;
+        }
+    } catch (error) {
+        console.error('DashboardRouter: Sub-dashboard Render Failed', error);
+        throw error;
     }
 };
 

@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, Cell } from 'recharts';
-import { TrendingUp, Activity, Flame, Dumbbell, Timer } from 'lucide-react';
 import api from '../api/axios';
 import PageTransition from '../components/PageTransition';
+import PredictivePRs from '../components/PredictivePRs';
+import BodyScanner from '../components/BodyScanner';
+import { TrendingUp, Activity, Flame, Dumbbell, Timer, Zap, Scan } from 'lucide-react';
 
 const Analytics = () => {
     const [data, setData] = useState([]);
@@ -227,6 +229,35 @@ const Analytics = () => {
                             </ResponsiveContainer>
                         </div>
                     </motion.div>
+                </div>
+
+                {/* Advanced Neural Analytics Section */}
+                <div className="mt-16 border-t border-white/5 pt-16">
+                    <header className="mb-12">
+                        <h2 className="text-3xl font-black uppercase tracking-tight text-white italic flex items-center gap-4">
+                            <Zap className="text-primary" size={32} />
+                            Advanced Neural Analytics
+                        </h2>
+                        <p className="text-dark-muted font-bold tracking-widest text-[10px] uppercase mt-2">Deep-learning projections & structural scans</p>
+                    </header>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                        <div className="space-y-8">
+                            <div className="flex items-center gap-3 mb-2 text-primary-light">
+                                <TrendingUp size={18} />
+                                <h3 className="text-sm font-black uppercase tracking-widest">Strength Trajectory</h3>
+                            </div>
+                            <PredictivePRs />
+                        </div>
+
+                        <div className="space-y-8">
+                            <div className="flex items-center gap-3 mb-2 text-secondary-light">
+                                <Scan size={18} />
+                                <h3 className="text-sm font-black uppercase tracking-widest">3D Structural Scan</h3>
+                            </div>
+                            <BodyScanner />
+                        </div>
+                    </div>
                 </div>
             </div>
         </PageTransition>

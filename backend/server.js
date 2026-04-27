@@ -1,6 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const path = require('path');
 const connectDB = require('./config/db');
 
 dotenv.config();
@@ -22,6 +23,7 @@ const io = new Server(server, {
 
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/', (req, res) => {
     res.send('API is running...');
@@ -35,6 +37,7 @@ app.use('/api/messages', require('./routes/messageRoutes'));
 app.use('/api/nutrition', require('./routes/nutritionRoutes'));
 app.use('/api/photos', require('./routes/progressPhotoRoutes'));
 app.use('/api/weight', require('./routes/weightRoutes'));
+app.use('/api/badges', require('./routes/badgeRoutes'));
 
 // Socket.io Logic
 io.on('connection', (socket) => {
@@ -43,6 +46,18 @@ io.on('connection', (socket) => {
     socket.on('join_room', (userId) => {
         socket.join(userId);
         console.log(`User with ID: ${socket.id} joined room: ${userId}`);
+    });
+
+    socket.on('workout_start', (data) => {
+        const { userId, exerciseName } = data;
+        socket.join('gym_floor');
+        socket.to('gym_floor').emit('peer_joined', { userId, exerciseName });
+        console.log(`User ${userId} started ${exerciseName} on the gym floor`);
+    });
+
+    socket.on('workout_update', (data) => {
+        const { userId, sets, reps, exerciseName } = data;
+        socket.to('gym_floor').emit('peer_update', { userId, sets, reps, exerciseName });
     });
 
     socket.on('send_message', async (data) => {
@@ -67,6 +82,20 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 5000;
+
+// Ensure uploads directory exists
+const fs = require('fs');
+const dir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(dir)){
+    fs.mkdirSync(dir);
+    console.log('Created uploads directory');
+}
+
+// Error Handling Middleware
+app.use((err, req, res, next) => {
+    console.error('SERVER ERROR:', err.stack);
+    res.status(500).json({ message: 'Something went wrong!', error: err.message });
+});
 
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

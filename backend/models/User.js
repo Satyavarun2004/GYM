@@ -21,8 +21,10 @@ const userSchema = mongoose.Schema({
         required: true
     },
     badges: [{
-        name: String,
-        icon: String, // lucide icon name or image url
+        badge: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Badge'
+        },
         dateEarned: {
             type: Date,
             default: Date.now
@@ -77,7 +79,40 @@ const userSchema = mongoose.Schema({
     },
     phoneNumber: {
         type: String,
+        default: null,
+        unique: true,
+        sparse: true
+    },
+    fitnessGoals: {
+        targetWeight: { type: Number, default: null },
+        goalType: { 
+            type: String, 
+            enum: ['fat_loss', 'muscle_gain', 'maintenance'], 
+            default: 'maintenance' 
+        },
+        deadline: { type: Date, default: null },
+        weeklyTarget: { type: Number, default: 0.5 }
+    },
+    aiTrainerState: {
+        fatigueLevel: { type: Number, default: 0 },
+        missedSessions: { type: Number, default: 0 },
+        deloadSuggested: { type: Boolean, default: false },
+        lastDeloadDate: { type: Date, default: null }
+    },
+    wearableData: {
+        heartRate: { type: Number, default: 70 },
+        sleepQuality: { type: Number, default: 85 }, // 0-100
+        recoveryScore: { type: Number, default: 90 }, // 0-100
+        lastSync: { type: Date, default: Date.now }
+    },
+    clan: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Clan',
         default: null
+    },
+    clanContribution: {
+        type: Number,
+        default: 0
     }
 }, {
     timestamps: true

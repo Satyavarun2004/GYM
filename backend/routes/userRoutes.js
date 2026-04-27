@@ -17,16 +17,52 @@ const generateToken = (id) => {
 router.post('/', async (req, res) => {
     const { name, email, password, role, age, experience, gender, height, weight, phoneNumber } = req.body;
 
+    const emailExists = await User.findOne({ email });
+    if (emailExists) {
+        return res.status(400).json({ message: 'Email already exists' });
+    }
+
+    if (phoneNumber) {
+        const phoneExists = await User.findOne({ phoneNumber });
+        if (phoneExists) {
+            return res.status(400).json({ message: 'Phone number already exists' });
+        }
+    }
+
+    // Validation Logic
+    if (!name || name.length < 2) {
+        return res.status(400).json({ message: 'Name must be at least 2 characters' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+        return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    // Password validation: 8+ chars, 1 upper, 1 lower, 1 number, 1 special char
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{8,}$/;
+    if (!passwordRegex.test(password)) {
+        return res.status(400).json({ 
+            message: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character' 
+        });
+    }
+
     const sanitizeNumber = (val) => (val === '' || val === undefined || val === null ? null : Number(val));
     const processedAge = sanitizeNumber(age);
-    const processedExperience = sanitizeNumber(experience) || 0; // Default to 0
+    const processedExperience = sanitizeNumber(experience) || 0;
     const processedHeight = sanitizeNumber(height);
     const processedWeight = sanitizeNumber(weight);
 
-    const userExists = await User.findOne({ email });
+    if (processedAge !== null && (processedAge < 13 || processedAge > 120)) {
+        return res.status(400).json({ message: 'Age must be between 13 and 120' });
+    }
 
-    if (userExists) {
-        return res.status(400).json({ message: 'User already exists' });
+    if (processedHeight !== null && (processedHeight < 50 || processedHeight > 300)) {
+        return res.status(400).json({ message: 'Height must be between 50 and 300 cm' });
+    }
+
+    if (processedWeight !== null && (processedWeight < 30 || processedWeight > 500)) {
+        return res.status(400).json({ message: 'Weight must be between 30 and 500 kg' });
     }
 
     let bmi = null;
@@ -300,46 +336,60 @@ router.get('/my-trainees', protect, async (req, res) => {
     res.json(trainees);
 });
 
-// @desc    Check and award achievements
+// @desc    Check and award achievements (Sync)
 // @route   PUT /api/users/profile/achievements
 // @access  Private
 router.put('/profile/achievements', protect, async (req, res) => {
     try {
         const user = await User.findById(req.user._id);
-        const activities = await require('../models/Activity').find({ user: user._id });
+        const Badge = require('../models/Badge');
+        const Activity = require('../models/Activity');
         
-        const newBadges = [];
-        const hasBadge = (name) => user.badges.some(b => b.name === name);
+        const totalActivities = await Activity.countDocuments({ user: req.user._id });
+        const strengthSessions = await Activity.countDocuments({ user: req.user._id, type: 'exercise' });
 
-        // 1. Step Milestones
-        if (user.stats.totalSteps >= 10000 && !hasBadge('10k Club')) {
-            newBadges.push({ name: '10k Club', icon: 'Footprints' });
+        const badgesToAward = [];
+        
+        // Use exact names from seed file
+        if (totalActivities >= 1) {
+            const b = await Badge.findOne({ name: 'First Blood' });
+            if (b) badgesToAward.push(b._id);
         }
 
-        // 2. Challenge Milestones
-        if (user.stats.challengesCompleted >= 5 && !hasBadge('Challenge Conqueror')) {
-            newBadges.push({ name: 'Challenge Conqueror', icon: 'Trophy' });
+        if (strengthSessions >= 10) {
+            const b = await Badge.findOne({ name: 'Iron Warrior' });
+            if (b) badgesToAward.push(b._id);
         }
 
-        // 3. Lifting Milestones (Volume check)
-        const totalVolume = activities.reduce((acc, curr) => {
-            if (curr.type === 'exercise' && curr.exerciseDetails) {
-                return acc + (curr.exerciseDetails.reps * curr.exerciseDetails.sets * curr.exerciseDetails.weight);
+        if (user.stats.currentStreak >= 100) {
+            const b = await Badge.findOne({ name: 'Centurion' });
+            if (b) badgesToAward.push(b._id);
+        }
+
+        let addedCount = 0;
+        let totalXpGained = 0;
+        for (const badgeId of badgesToAward) {
+            const alreadyHas = user.badges.some(b => b.badge.toString() === badgeId.toString());
+            if (!alreadyHas) {
+                const bDetail = await Badge.findById(badgeId);
+                user.badges.push({ badge: badgeId });
+                totalXpGained += (bDetail?.points || 10);
+                addedCount++;
             }
-            return acc;
-        }, 0);
-
-        if (totalVolume >= 1000 && !hasBadge('Lifting Legend')) {
-            newBadges.push({ name: 'Lifting Legend', icon: 'Dumbbell' });
         }
 
-        if (newBadges.length > 0) {
-            user.badges.push(...newBadges);
+        if (addedCount > 0) {
+            user.experience = (user.experience || 0) + totalXpGained;
             await user.save();
-            return res.json({ message: 'New achievements unlocked!', badges: newBadges, allBadges: user.badges });
+            const updatedUser = await User.findById(req.user._id).populate('badges.badge');
+            return res.json({ 
+                message: `Unlocked ${addedCount} new achievements! +${totalXpGained} XP earned.`, 
+                badges: updatedUser.badges,
+                experience: updatedUser.experience
+            });
         }
 
-        res.json({ message: 'No new achievements', allBadges: user.badges });
+        res.json({ message: 'No new achievements found.', badges: user.badges });
     } catch (error) {
         res.status(400).json({ message: 'Failed to sync achievements', error: error.message });
     }
@@ -354,11 +404,21 @@ router.get('/peers', protect, async (req, res) => {
         return res.status(404).json({ message: 'User not found' });
     }
 
+    const ageRange = 5;
+    const minAge = (currentUser.age || 0) - ageRange;
+    const maxAge = (currentUser.age || 0) + ageRange;
+
+    // Matching peers based on:
+    // 1. Not the current user
+    // 2. Same role (customer)
+    // 3. Similar or higher experience (>= current - 1)
+    // 4. Similar age (±5 years)
     const peers = await User.find({
-        _id: { $ne: currentUser._id }, // Exclude current user
-        experience: { $gte: currentUser.experience || 0 }, // Greater than or equal to current user's experience
-        role: 'customer' // Only customers? Assuming peers are customers. Or allow trainers too? Let's stick to customers for now or all users. Let's do all users.
-    }).select('name email phoneNumber experience gender stats');
+        _id: { $ne: currentUser._id },
+        role: 'customer',
+        experience: { $gte: Math.max(0, (currentUser.experience || 0) - 1) },
+        age: { $gte: minAge, $lte: maxAge }
+    }).select('name email phoneNumber experience gender stats age');
     
     res.json(peers);
 });

@@ -8,7 +8,8 @@ const Gallery = () => {
     const [photos, setPhotos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
-    const [newPhoto, setNewPhoto] = useState({ imageUrl: '', weight: '', note: '' });
+    const [newPhoto, setNewPhoto] = useState({ image: null, weight: '', note: '' });
+    const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
     useEffect(() => {
         fetchPhotos();
@@ -27,13 +28,21 @@ const Gallery = () => {
 
     const handleUpload = async (e) => {
         e.preventDefault();
+        if (!newPhoto.image) return alert('Please select an image');
+
         setIsUploading(true);
+        const formData = new FormData();
+        formData.append('image', newPhoto.image);
+        formData.append('weight', newPhoto.weight);
+        formData.append('note', newPhoto.note);
+
         try {
-            await api.post('/api/photos', newPhoto);
-            setNewPhoto({ imageUrl: '', weight: '', note: '' });
+            await api.post('/api/photos', formData);
+            setNewPhoto({ image: null, weight: '', note: '' });
             fetchPhotos();
         } catch (error) {
             console.error('Upload failed:', error);
+            alert(error.response?.data?.message || 'Upload failed');
         } finally {
             setIsUploading(false);
         }
@@ -75,16 +84,21 @@ const Gallery = () => {
 
                             <form onSubmit={handleUpload} className="space-y-4">
                                 <div>
-                                    <label className="block text-[10px] font-black text-dark-muted uppercase tracking-widest mb-2 ml-1">Photo URL</label>
+                                    <label className="block text-[10px] font-black text-dark-muted uppercase tracking-widest mb-2 ml-1">Select Photo</label>
                                     <div className="relative">
                                         <input
-                                            type="text"
-                                            className="input-field py-3 pl-10 text-xs"
-                                            placeholder="Paste image link..."
-                                            value={newPhoto.imageUrl}
-                                            onChange={(e) => setNewPhoto({ ...newPhoto, imageUrl: e.target.value })}
-                                            required
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            id="photo-upload"
+                                            onChange={(e) => setNewPhoto({ ...newPhoto, image: e.target.files[0] })}
                                         />
+                                        <label
+                                            htmlFor="photo-upload"
+                                            className="input-field py-3 pl-10 text-xs flex items-center cursor-pointer hover:border-primary/50 transition-colors"
+                                        >
+                                            {newPhoto.image ? newPhoto.image.name : 'Choose image...'}
+                                        </label>
                                         <Camera className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted" size={14} />
                                     </div>
                                 </div>
@@ -148,7 +162,7 @@ const Gallery = () => {
                                         >
                                             <div className="aspect-[3/4] rounded-xl overflow-hidden mb-4 relative">
                                                 <img
-                                                    src={photo.imageUrl}
+                                                    src={`${BACKEND_URL}${photo.imageUrl}`}
                                                     alt="Progress"
                                                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                                                 />

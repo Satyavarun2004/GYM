@@ -1,10 +1,15 @@
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Dumbbell, ClipboardList, PlusCircle, Star, Utensils } from 'lucide-react';
+import { Users, Dumbbell, ClipboardList, PlusCircle, Star, Utensils, LogOut } from 'lucide-react';
 import PageTransition from '../../components/PageTransition';
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
+import { useContext } from 'react';
+import AuthContext from '../../context/AuthContext';
 
 const TrainerDashboard = () => {
+    const { logout } = useContext(AuthContext);
+    const navigate = useNavigate();
     const [showChallengeModal, setShowChallengeModal] = useState(false);
     const [title, setTitle] = useState('');
     const [goal, setGoal] = useState('');
@@ -90,6 +95,11 @@ const TrainerDashboard = () => {
         }
     };
 
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+    };
+
     return (
         <PageTransition>
             <div className="space-y-10 pb-10">
@@ -107,9 +117,15 @@ const TrainerDashboard = () => {
                             Certified Trainer
                         </span>
                     </div>
+                    <button
+                        onClick={handleLogout}
+                        className="p-2 rounded-xl bg-white/5 border border-white/10 text-red-400 hover:bg-red-500/10 transition-all"
+                        title="Sign Out"
+                    >
+                        <LogOut size={20} />
+                    </button>
                 </header>
 
-                {/* Trainer Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="glass-card p-6 flex items-center gap-4">
                         <div className="p-4 rounded-2xl bg-blue-400/10 text-blue-400">
@@ -140,7 +156,6 @@ const TrainerDashboard = () => {
                     </div>
                 </div>
 
-                {/* Quick Actions */}
                 <div className="flex gap-4 flex-wrap">
                     <button
                         onClick={() => setShowChallengeModal(true)}
@@ -158,7 +173,6 @@ const TrainerDashboard = () => {
                     </button>
                 </div>
 
-                {/* Create Challenge Modal */}
                 {showChallengeModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                         <div className="glass-card p-8 w-full max-w-md animate-in fade-in zoom-in duration-200">
@@ -202,7 +216,6 @@ const TrainerDashboard = () => {
                     </div>
                 )}
 
-                {/* Create Diet Modal */}
                 {showDietModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                         <div className="glass-card p-8 w-full max-w-md animate-in fade-in zoom-in duration-200">
@@ -240,9 +253,7 @@ const TrainerDashboard = () => {
                     </div>
                 )}
 
-                {/* Main Content Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Active Trainees List */}
                     <div className="glass-card p-6">
                         <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                             <Users size={20} className="text-primary-light" />
@@ -273,7 +284,6 @@ const TrainerDashboard = () => {
                         </div>
                     </div>
 
-                    {/* Active Challenges List */}
                     <div className="glass-card p-6">
                         <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                             <Dumbbell size={20} className="text-secondary-light" />

@@ -1,6 +1,7 @@
 import { useContext, useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Activity, Flame, Trophy, TrendingUp, Calendar, Zap, Award, Plus, Users, Utensils, MessageCircle, Phone, Mail, ChevronRight, History } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Link, useNavigate } from 'react-router-dom';
+import { Activity, Flame, Trophy, TrendingUp, Calendar, Zap, Award, Plus, Users, Utensils, MessageCircle, Phone, Mail, ChevronRight, History, LogOut } from 'lucide-react';
 import ActivityChart from '../../components/Charts/ActivityChart';
 import PageTransition from '../../components/PageTransition';
 import AuthContext from '../../context/AuthContext';
@@ -10,7 +11,8 @@ import socket from '../../socket';
 import DashboardPersonalization from './DashboardPersonalization';
 
 const CustomerDashboard = () => {
-    const { user } = useContext(AuthContext);
+    const { user, logout } = useContext(AuthContext);
+    const navigate = useNavigate();
     const [recentActivities, setRecentActivities] = useState([]);
     const [loadingActivities, setLoadingActivities] = useState(true);
     const [bmi, setBmi] = useState(user?.bmi || null);
@@ -119,6 +121,15 @@ const CustomerDashboard = () => {
             }
         };
 
+        const fetchWeeklyAnalytics = async () => {
+            try {
+                const { data } = await api.get('/activities/analytics');
+                setWeeklyData(data);
+            } catch (error) {
+                console.error('Failed to fetch weekly analytics', error);
+            }
+        };
+
         fetchProfile();
         fetchTrainers();
         fetchChallenges();
@@ -139,9 +150,10 @@ const CustomerDashboard = () => {
         };
     }, [user]);
 
-    // Derived state
-    const myChallenges = allChallenges.filter(c => c.participants.some(p => p.user === user._id));
-    const availableChallenges = allChallenges.filter(c => !c.participants.some(p => p.user === user._id));
+    // Derived state with safety guards
+    const safeChallenges = Array.isArray(allChallenges) ? allChallenges : [];
+    const myChallenges = safeChallenges.filter(c => Array.isArray(c.participants) && c.participants.some(p => p.user === user?._id));
+    const availableChallenges = safeChallenges.filter(c => Array.isArray(c.participants) && !c.participants.some(p => p.user === user?._id));
 
     const handleJoinChallenge = async (challengeId) => {
         try {
@@ -195,6 +207,11 @@ const CustomerDashboard = () => {
         setSelectedPeerForChat(peer);
     };
 
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+    };
+
     const stats = [
         { title: 'BMI', value: bmi ? bmi.toString() : 'N/A', goal: '22', icon: Activity, color: 'text-blue-400', bg: 'bg-blue-400/10', glow: 'shadow-glow-blue' },
         { title: 'Total Steps', value: dashboardStats?.totalSteps?.toLocaleString() || '0', goal: '10,000', icon: Activity, color: 'text-violet-400', bg: 'bg-violet-400/10', glow: 'shadow-glow-purple' },
@@ -228,7 +245,7 @@ const CustomerDashboard = () => {
                             </span>
                         )}
                     </div>
-                    <p className="text-dark-muted mt-1 text-lg">Welcome back, {user?.name}! Ready for your workout?</p>
+                    <p className="text-dark-muted mt-1 text-lg">Welcome back, {user?.name || 'Athlete'}! Ready for your workout?</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <button
@@ -266,8 +283,59 @@ const CustomerDashboard = () => {
                         <Plus size={18} />
                         Log Activity
                     </Link>
+                    <button
+                        onClick={handleLogout}
+                        className="p-2 rounded-xl bg-white/5 border border-white/10 text-red-400 hover:bg-red-500/10 transition-all"
+                        title="Sign Out"
+                    >
+                        <LogOut size={20} />
+                    </button>
                 </div>
             </header>
+
+            {/* Quick Readiness Card */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Link to="/biometrics" className="md:col-span-2 glass-card p-6 border-primary/20 bg-gradient-to-r from-primary/10 to-transparent flex items-center justify-between hover:border-primary/40 transition-all group">
+                    <div className="flex items-center gap-6">
+                        <div className="relative">
+                            <svg className="w-16 h-16 transform -rotate-90">
+                                <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-white/5" />
+                                <motion.circle
+                                    cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="transparent"
+                                    className="text-primary-light" strokeDasharray={176}
+                                    initial={{ strokeDashoffset: 176 }}
+                                    animate={{ strokeDashoffset: 176 - (Math.min(user?.wearableData?.recoveryScore || 85, 100) / 100) * 176 }}
+                                    transition={{ duration: 1.5, ease: "easeOut" }}
+                                />
+                            </svg>
+                            <div className="absolute inset-0 flex items-center justify-center font-black text-white text-sm">
+                                {user?.wearableData?.recoveryScore || 85}%
+                            </div>
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-black text-white uppercase tracking-widest mb-1">Elite Recovery Readiness</h4>
+                            <p className="text-[10px] text-dark-muted font-bold uppercase tracking-widest group-hover:text-primary-light transition-colors">
+                                Neural systems optimal. High intensity training viable.
+                            </p>
+                        </div>
+                    </div>
+                    <ChevronRight size={20} className="text-dark-muted group-hover:text-white group-hover:translate-x-1 transition-all" />
+                </Link>
+
+                <div className="glass-card p-6 border-white/5 bg-white/5 flex flex-col justify-center">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-[8px] font-black text-dark-muted uppercase tracking-[2px]">Last Sleep Scan</span>
+                        <span className="text-[10px] font-black text-emerald-400 font-mono">{user?.wearableData?.sleepQuality || 92}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-black/20 rounded-full overflow-hidden">
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${user?.wearableData?.sleepQuality || 92}%` }}
+                            className="h-full bg-emerald-500"
+                        />
+                    </div>
+                </div>
+            </div>
 
             {/* BMI & Personalized Plans Section */}
             <DashboardPersonalization
@@ -347,49 +415,50 @@ const CustomerDashboard = () => {
                         Your Active Challenges
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {myChallenges.map(challenge => (
-                            <div key={challenge._id} className="bg-white/5 border border-white/5 rounded-2xl p-5 relative overflow-hidden">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-amber-500/10 rounded-lg text-amber-500">
-                                            <Trophy size={20} />
+                        {myChallenges.map(challenge => {
+                            const participant = challenge?.participants?.find(p => p.user === user?._id);
+                            const progress = participant?.progress || 0;
+                            const goal = challenge?.isAdaptive ? (participant?.personalizedGoal || challenge?.goal || 1) : (challenge?.goal || 1);
+
+                            return (
+                                <div key={challenge?._id} className="bg-white/5 border border-white/5 rounded-2xl p-5 relative overflow-hidden">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-amber-500/10 rounded-lg text-amber-500">
+                                                <Trophy size={20} />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-white">{challenge?.title || 'Challenge'}</h4>
+                                                <p className="text-xs text-dark-muted">{challenge?.durationDays || 0} Days Goal</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h4 className="font-bold text-white">{challenge.title}</h4>
-                                            <p className="text-xs text-dark-muted">{challenge.durationDays} Days Goal</p>
+                                        {participant?.status === 'completed' && (
+                                            <span className="text-xs font-bold bg-green-500/20 text-green-400 px-2 py-1 rounded">Completed</span>
+                                        )}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-xs font-bold text-dark-muted">
+                                            <span>Progress</span>
+                                            <span>
+                                                {progress} / {goal}
+                                                {challenge?.isAdaptive && <span className="text-primary-light ml-1" title="Personalized Adaptive Goal">*</span>}
+                                            </span>
                                         </div>
+                                        <div className="w-full h-2 bg-black/20 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-amber-500 to-orange-500"
+                                                style={{
+                                                    width: `${Math.min(100, (progress / goal) * 100)}%`
+                                                }}
+                                            ></div>
+                                        </div>
+                                        {challenge?.isAdaptive && (
+                                            <p className="text-[10px] text-primary/60 italic">* Adaptive goal based on your level</p>
+                                        )}
                                     </div>
-                                    {/* Progress Badge */}
-                                    {challenge.participants.find(p => p.user === user._id)?.status === 'completed' && (
-                                        <span className="text-xs font-bold bg-green-500/20 text-green-400 px-2 py-1 rounded">Completed</span>
-                                    )}
                                 </div>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-xs font-bold text-dark-muted">
-                                        <span>Progress</span>
-                                        <span>
-                                            {challenge.participants.find(p => p.user === user._id)?.progress || 0} /
-                                            {challenge.isAdaptive ? (
-                                                <span className="text-primary-light ml-1" title="Personalized Adaptive Goal">
-                                                    {challenge.participants.find(p => p.user === user._id)?.personalizedGoal || challenge.goal}*
-                                                </span>
-                                            ) : challenge.goal}
-                                        </span>
-                                    </div>
-                                    <div className="w-full h-2 bg-black/20 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-gradient-to-r from-amber-500 to-orange-500"
-                                            style={{
-                                                width: `${Math.min(100, ((challenge.participants.find(p => p.user === user._id)?.progress || 0) / (challenge.isAdaptive ? (challenge.participants.find(p => p.user === user._id)?.personalizedGoal || challenge.goal) : challenge.goal)) * 100)}%`
-                                            }}
-                                        ></div>
-                                    </div>
-                                    {challenge.isAdaptive && (
-                                        <p className="text-[10px] text-primary/60 italic">* Adaptive goal based on your level</p>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}
@@ -481,6 +550,7 @@ const CustomerDashboard = () => {
                                                 <h4 className="font-bold text-white text-lg">{peer.name}</h4>
                                                 <p className="text-xs text-dark-muted flex items-center gap-2">
                                                     <span className="bg-white/10 px-2 py-0.5 rounded text-xs">{peer.experience || 0} Years Exp</span>
+                                                    {peer.age && <span className="bg-white/10 px-2 py-0.5 rounded text-xs">{peer.age} Years Old</span>}
                                                     {peer.gender && <span className="bg-white/10 px-2 py-0.5 rounded text-xs">{peer.gender}</span>}
                                                 </p>
                                             </div>
