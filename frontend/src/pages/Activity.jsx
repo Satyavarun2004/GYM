@@ -10,7 +10,7 @@ import VisionLens from '../components/VisionLens';
 import LivePeers from '../components/LivePeers';
 import AuthContext from '../context/AuthContext';
 
-const socket = io('http://localhost:5000');
+const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
 
 const Activity = () => {
     const { user } = useContext(AuthContext);
