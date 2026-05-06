@@ -16,7 +16,7 @@ services:
         value: "5000"
 
   # Frontend Static Site
-  - type: static
+  - type: static_site
     name: gym-frontend
     plan: free
     rootDir: frontend
