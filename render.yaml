@@ -13,8 +13,7 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: PORT
-        value: 5000
-      # Removed circular FRONTEND_URL; you can add this in the dashboard after deployment
+        value: "5000"
 
   # Frontend Static Site
   - type: static
@@ -22,7 +21,7 @@ services:
     plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
-    publishPath: dist
+    publishPath: frontend/dist
     envVars:
       - key: VITE_API_URL
         fromService:
