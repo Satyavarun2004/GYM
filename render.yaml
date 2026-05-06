@@ -14,16 +14,11 @@ services:
         sync: false
       - key: PORT
         value: 5000
-      - key: FRONTEND_URL
-        fromService:
-          type: static
-          name: gym-frontend
-          property: url
+      # Removed circular FRONTEND_URL; you can add this in the dashboard after deployment
 
   # Frontend Static Site
   - type: static
     name: gym-frontend
-    env: static
     plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
