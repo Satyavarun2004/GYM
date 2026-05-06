@@ -12,16 +12,13 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
-      - key: PORT
-        value: "5000"
 
   # Frontend Static Site
   - type: static_site
     name: gym-frontend
-    plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
-    publishPath: frontend/dist
+    publishDir: dist
     envVars:
       - key: VITE_API_URL
         fromService:
