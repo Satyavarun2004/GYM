@@ -18,6 +18,7 @@ import Analytics from './pages/Analytics';
 import Achievements from './pages/Achievements';
 import History from './pages/History';
 import AIWorkoutGenerator from './pages/AIWorkoutGenerator';
+import AdminUserPerformance from './pages/Dashboard/AdminUserPerformance';
 
 import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
@@ -49,6 +50,7 @@ function App() {
                 <Route path="/achievements" element={<Achievements />} />
                 <Route path="/history" element={<History />} />
                 <Route path="/admin-chat" element={<AdminChat />} />
+                <Route path="/admin/user-performance/:id" element={<AdminUserPerformance />} />
                 <Route path="/profile" element={<div className="text-center p-10">Profile Coming Soon</div>} />
               </Route>
             </Route>

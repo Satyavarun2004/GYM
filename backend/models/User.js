@@ -16,6 +16,24 @@ const userSchema = mongoose.Schema({
         enum: ['customer', 'trainer', 'admin'],
         default: 'customer'
     },
+    status: {
+        type: String,
+        enum: ['pending', 'active', 'rejected'],
+        default: 'pending'
+    },
+    membershipDuration: {
+        type: Number,
+        default: 1
+    },
+    feePaid: {
+        type: Number,
+        default: 0
+    },
+    paymentMethod: {
+        type: String,
+        enum: ['UPI', 'Credit Card', 'Net Banking', 'Cash'],
+        default: 'UPI'
+    },
     password: {
         type: String,
         required: true

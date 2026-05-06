@@ -1,7 +1,7 @@
 import { useContext, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { Activity, Flame, Trophy, TrendingUp, Calendar, Zap, Award, Plus, Users, Utensils, MessageCircle, Phone, Mail, ChevronRight, History, LogOut } from 'lucide-react';
+import { Activity, Flame, Trophy, TrendingUp, Calendar, Zap, Award, Plus, Users, Utensils, MessageCircle, Phone, Mail, ChevronRight, History, LogOut, Shield } from 'lucide-react';
 import ActivityChart from '../../components/Charts/ActivityChart';
 import PageTransition from '../../components/PageTransition';
 import AuthContext from '../../context/AuthContext';
@@ -10,7 +10,8 @@ import ChatModal from '../../components/ChatModal';
 import socket from '../../socket';
 import DashboardPersonalization from './DashboardPersonalization';
 
-const CustomerDashboard = () => {
+const CustomerDashboard = ({ targetUserId = null }) => {
+    const isAdminView = !!targetUserId;
     const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
     const [recentActivities, setRecentActivities] = useState([]);
@@ -19,6 +20,7 @@ const CustomerDashboard = () => {
     const [dashboardStats, setDashboardStats] = useState(user?.stats || {});
     const [selectedTrainer, setSelectedTrainer] = useState(null);
     const [trainers, setTrainers] = useState([]);
+    const [targetUserProfile, setTargetUserProfile] = useState(null);
     const [showTrainerModal, setShowTrainerModal] = useState(false);
 
     const [allChallenges, setAllChallenges] = useState([]);
@@ -45,7 +47,9 @@ const CustomerDashboard = () => {
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-                const { data } = await api.get('/users/profile');
+                const url = isAdminView ? `/users/profile?userId=${targetUserId}` : '/users/profile';
+                const { data } = await api.get(url);
+                setTargetUserProfile(data);
                 setDashboardStats(data.stats);
                 setBmi(data.bmi);
                 if (data.selectedTrainer) {
@@ -94,11 +98,13 @@ const CustomerDashboard = () => {
 
         const fetchDailyCalorieStats = async () => {
             try {
-                const { data: nutrition } = await api.get('/nutrition/daily-summary');
+                const nutritionUrl = isAdminView ? `/nutrition/daily-summary?userId=${targetUserId}` : '/nutrition/daily-summary';
+                const { data: nutrition } = await api.get(nutritionUrl);
                 setDailyNutrition(nutrition);
 
                 // Fetch activities for today to calculate burned calories
-                const { data: activities } = await api.get('/activities');
+                const activitiesUrl = isAdminView ? `/activities?userId=${targetUserId}` : '/activities';
+                const { data: activities } = await api.get(activitiesUrl);
                 const startOfDay = new Date();
                 startOfDay.setHours(0, 0, 0, 0);
                 const todayBurned = activities
@@ -112,7 +118,8 @@ const CustomerDashboard = () => {
 
         const fetchRecentActivities = async () => {
             try {
-                const { data } = await api.get('/activities');
+                const url = isAdminView ? `/activities?userId=${targetUserId}` : '/activities';
+                const { data } = await api.get(url);
                 setRecentActivities(data.slice(0, 3)); // Only show last 3
                 setLoadingActivities(false);
             } catch (error) {
@@ -123,7 +130,8 @@ const CustomerDashboard = () => {
 
         const fetchWeeklyAnalytics = async () => {
             try {
-                const { data } = await api.get('/activities/analytics');
+                const url = isAdminView ? `/activities/analytics?userId=${targetUserId}` : '/activities/analytics';
+                const { data } = await api.get(url);
                 setWeeklyData(data);
             } catch (error) {
                 console.error('Failed to fetch weekly analytics', error);
@@ -151,9 +159,10 @@ const CustomerDashboard = () => {
     }, [user]);
 
     // Derived state with safety guards
+    const currentViewUserId = isAdminView ? targetUserId : user?._id;
     const safeChallenges = Array.isArray(allChallenges) ? allChallenges : [];
-    const myChallenges = safeChallenges.filter(c => Array.isArray(c.participants) && c.participants.some(p => p.user === user?._id));
-    const availableChallenges = safeChallenges.filter(c => Array.isArray(c.participants) && !c.participants.some(p => p.user === user?._id));
+    const myChallenges = safeChallenges.filter(c => Array.isArray(c.participants) && c.participants.some(p => p.user?.toString() === currentViewUserId?.toString()));
+    const availableChallenges = safeChallenges.filter(c => Array.isArray(c.participants) && !c.participants.some(p => p.user?.toString() === currentViewUserId?.toString()));
 
     const handleJoinChallenge = async (challengeId) => {
         try {
@@ -248,48 +257,58 @@ const CustomerDashboard = () => {
                     <p className="text-dark-muted mt-1 text-lg">Welcome back, {user?.name || 'Athlete'}! Ready for your workout?</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => setShowNutritionModal(true)}
-                        className="btn-secondary flex items-center gap-2 text-sm py-2 px-4 shadow-lg border-primary/20"
-                    >
-                        <Utensils size={18} />
-                        Log Meal
-                    </button>
-                    <button
-                        onClick={() => setShowPeersModal(true)}
-                        className="btn-secondary flex items-center gap-2 text-sm py-2 px-4 shadow-lg shadow-secondary/10"
-                    >
-                        <MessageCircle size={18} />
-                        Connect with Peers
-                    </button>
-                    <button
-                        onClick={() => setShowChallengeBrowser(true)}
-                        className="btn-secondary flex items-center gap-2 text-sm py-2 px-4"
-                    >
-                        <Trophy size={18} />
-                        Join Challenge
-                    </button>
-                    <Link
-                        to="/history"
-                        className="btn-secondary flex items-center gap-2 text-sm py-2 px-4 shadow-lg shadow-secondary/10"
-                    >
-                        <History size={18} />
-                        History
-                    </Link>
-                    <Link
-                        to="/activity"
-                        className="btn-primary flex items-center gap-2 text-sm py-2 px-4 shadow-lg shadow-primary/20 hover:shadow-primary/40"
-                    >
-                        <Plus size={18} />
-                        Log Activity
-                    </Link>
-                    <button
-                        onClick={handleLogout}
-                        className="p-2 rounded-xl bg-white/5 border border-white/10 text-red-400 hover:bg-red-500/10 transition-all"
-                        title="Sign Out"
-                    >
-                        <LogOut size={20} />
-                    </button>
+                    {!isAdminView && (
+                        <>
+                            <button
+                                onClick={() => setShowNutritionModal(true)}
+                                className="btn-secondary flex items-center gap-2 text-sm py-2 px-4 shadow-lg border-primary/20"
+                            >
+                                <Utensils size={18} />
+                                Log Meal
+                            </button>
+                            <button
+                                onClick={() => setShowPeersModal(true)}
+                                className="btn-secondary flex items-center gap-2 text-sm py-2 px-4 shadow-lg shadow-secondary/10"
+                            >
+                                <MessageCircle size={18} />
+                                Connect with Peers
+                            </button>
+                            <button
+                                onClick={() => setShowChallengeBrowser(true)}
+                                className="btn-secondary flex items-center gap-2 text-sm py-2 px-4"
+                            >
+                                <Trophy size={18} />
+                                Join Challenge
+                            </button>
+                            <Link
+                                to="/history"
+                                className="btn-secondary flex items-center gap-2 text-sm py-2 px-4 shadow-lg shadow-secondary/10"
+                            >
+                                <History size={18} />
+                                History
+                            </Link>
+                            <Link
+                                to="/activity"
+                                className="btn-primary flex items-center gap-2 text-sm py-2 px-4 shadow-lg shadow-primary/20 hover:shadow-primary/40"
+                            >
+                                <Plus size={18} />
+                                Log Activity
+                            </Link>
+                            <button
+                                onClick={handleLogout}
+                                className="p-2 rounded-xl bg-white/5 border border-white/10 text-red-400 hover:bg-red-500/10 transition-all"
+                                title="Sign Out"
+                            >
+                                <LogOut size={20} />
+                            </button>
+                        </>
+                    )}
+                    {isAdminView && (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-xl text-primary-light font-bold text-sm">
+                            <Shield size={16} />
+                            Read-Only Performance View
+                        </div>
+                    )}
                 </div>
             </header>
 
@@ -341,6 +360,7 @@ const CustomerDashboard = () => {
             <DashboardPersonalization
                 dailyBurned={dailyBurned}
                 dailyIntake={dailyNutrition.totalCalories}
+                targetUser={isAdminView ? targetUserProfile : null}
             />
 
             {/* My Trainer Section */}

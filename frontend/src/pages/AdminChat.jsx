@@ -20,8 +20,8 @@ const AdminChat = () => {
     useEffect(() => {
         const fetchUsers = async () => {
             try {
-                const { data } = await axios.get('/api/users');
-                // Filter out the current admin user from the list
+                const { data } = await axios.get('/users/chat-users');
+                // Filter out the current user from the list
                 const otherUsers = data.filter(u => u._id !== user._id);
                 setUsers(otherUsers);
                 setFilteredUsers(otherUsers);
@@ -52,7 +52,7 @@ const AdminChat = () => {
 
         const fetchMessages = async () => {
             try {
-                const { data } = await axios.get(`/api/messages/${selectedUser._id}`);
+                const { data } = await axios.get(`/messages/${selectedUser._id}`);
                 setMessages(data);
                 scrollToBottom();
             } catch (error) {

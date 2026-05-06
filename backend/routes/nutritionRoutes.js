@@ -30,8 +30,13 @@ router.get('/daily-summary', protect, async (req, res) => {
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);
         
+        let targetId = req.user._id;
+        if (req.user.role === 'admin' && req.query.userId) {
+            targetId = req.query.userId;
+        }
+
         const intake = await Nutrition.find({
-            user: req.user._id,
+            user: targetId,
             createdAt: { $gte: startOfDay }
         });
 

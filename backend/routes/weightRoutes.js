@@ -34,7 +34,11 @@ router.post('/', protect, async (req, res) => {
 // @access  Private
 router.get('/', protect, async (req, res) => {
     try {
-        const logs = await WeightLog.find({ user: req.user._id }).sort({ date: 1 });
+        let targetId = req.user._id;
+        if (req.user.role === 'admin' && req.query.userId) {
+            targetId = req.query.userId;
+        }
+        const logs = await WeightLog.find({ user: targetId }).sort({ date: 1 });
         res.json(logs);
     } catch (error) {
         res.status(400).json({ message: 'Failed to fetch weight logs', error: error.message });

@@ -4,6 +4,7 @@ const User = require('../models/User');
 const WeightLog = require('../models/WeightLog');
 const jwt = require('jsonwebtoken');
 const { protect } = require('../middleware/authMiddleware');
+const nodemailer = require('nodemailer');
 
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -15,7 +16,7 @@ const generateToken = (id) => {
 // @route   POST /api/users
 // @access  Public
 router.post('/', async (req, res) => {
-    const { name, email, password, role, age, experience, gender, height, weight, phoneNumber } = req.body;
+    const { name, email, password, role, age, experience, gender, height, weight, phoneNumber, membershipDuration, paymentMethod } = req.body;
 
     const emailExists = await User.findOne({ email });
     if (emailExists) {
@@ -72,11 +73,24 @@ router.post('/', async (req, res) => {
         bmi = (processedWeight / (heightInMeters * heightInMeters)).toFixed(2);
     }
 
+    const processedDuration = Number(membershipDuration) || 1;
+    let feePaid = 1000;
+    if (processedDuration === 3) feePaid = 2700;
+    else if (processedDuration === 6) feePaid = 4800;
+    else if (processedDuration === 12) feePaid = 8400;
+
+    const userRole = role || 'customer';
+    const status = userRole === 'customer' ? 'pending' : 'active';
+
     const user = await User.create({
         name,
         email,
         password,
-        role: role || 'customer',
+        role: userRole,
+        status,
+        membershipDuration: processedDuration,
+        feePaid,
+        paymentMethod: paymentMethod || 'UPI',
         age: processedAge,
         experience: processedExperience,
         gender,
@@ -94,6 +108,14 @@ router.post('/', async (req, res) => {
     }
 
     if (user) {
+        if (user.status === 'pending') {
+            return res.status(201).json({
+                message: 'Registration successful. Your account is pending admin approval.',
+                _id: user._id,
+                status: user.status
+            });
+        }
+
         res.status(201).json({
             _id: user._id,
             name: user.name,
@@ -122,6 +144,9 @@ router.post('/login', async (req, res) => {
     const user = await User.findOne({ email });
 
     if (user && (await user.matchPassword(password))) {
+        if (user.status === 'pending') {
+            return res.status(403).json({ message: 'Your account is pending admin approval' });
+        }
         res.json({
             _id: user._id,
             name: user.name,
@@ -145,7 +170,14 @@ router.post('/login', async (req, res) => {
 // @route   GET /api/users/profile
 // @access  Private
 router.get('/profile', protect, async (req, res) => {
-    const user = await User.findById(req.user._id).populate('selectedTrainer', 'name email').populate('currentDietPlan');
+    let targetId = req.user._id;
+
+    // If admin and userId is provided, view that user's profile
+    if (req.user.role === 'admin' && req.query.userId) {
+        targetId = req.query.userId;
+    }
+
+    const user = await User.findById(targetId).populate('selectedTrainer', 'name email').populate('currentDietPlan');
 
     if (user) {
         // Calculate Motivation Status base on inactivity
@@ -250,6 +282,115 @@ router.get('/', protect, async (req, res) => {
     }
     const users = await User.find({});
     res.json(users);
+});
+
+// @desc    Get all users for chat (basic info)
+// @route   GET /api/users/chat-users
+// @access  Private
+router.get('/chat-users', protect, async (req, res) => {
+    // Return basic info for all active users so they can chat with each other
+    const users = await User.find({ status: { $ne: 'pending' } }).select('name email role');
+    res.json(users);
+});
+
+// @desc    Get admin performances data
+// @route   GET /api/users/admin/performances
+// @access  Private/Admin
+router.get('/admin/performances', protect, async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+        if (user.role !== 'admin') {
+            return res.status(401).json({ message: 'Not authorized as an admin' });
+        }
+
+        // Get members
+        const members = await User.find({ role: 'customer', status: 'active' }).select('name email stats bmi weight height experience');
+
+        // Get trainers with their assigned members count
+        // Using MongoDB aggregation to join Users with themselves based on selectedTrainer
+        const trainers = await User.aggregate([
+            { $match: { role: 'trainer', status: 'active' } },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: '_id',
+                    foreignField: 'selectedTrainer',
+                    as: 'assignedMembers'
+                }
+            },
+            {
+                $project: {
+                    name: 1,
+                    email: 1,
+                    experience: 1,
+                    memberCount: { $size: '$assignedMembers' }
+                }
+            }
+        ]);
+
+        res.json({ members, trainers });
+    } catch (error) {
+        console.error('Error fetching admin performances:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @desc    Get pending users
+// @route   GET /api/users/pending
+// @access  Private/Admin
+router.get('/pending', protect, async (req, res) => {
+    const user = await User.findById(req.user._id);
+    if (user.role !== 'admin') {
+        return res.status(401).json({ message: 'Not authorized as an admin' });
+    }
+    const users = await User.find({ status: 'pending' });
+    res.json(users);
+});
+
+// @desc    Approve a pending user
+// @route   PUT /api/users/approve/:id
+// @access  Private/Admin
+router.put('/approve/:id', protect, async (req, res) => {
+    const admin = await User.findById(req.user._id);
+    if (admin.role !== 'admin') {
+        return res.status(401).json({ message: 'Not authorized as an admin' });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (user) {
+        user.status = 'active';
+        await user.save();
+
+        // Send email
+        try {
+            // Using Ethereal Email for testing
+            const transporter = nodemailer.createTransport({
+                host: 'smtp.ethereal.email',
+                port: 587,
+                auth: {
+                    user: 'mylene.mayer@ethereal.email',
+                    pass: 'q9QG8RjH6s1N5H8zF3'
+                }
+            });
+
+            const mailOptions = {
+                from: '"FitPulse Pro Admin" <admin@fitpulse.com>',
+                to: user.email,
+                subject: 'Membership Approved - Welcome to FitPulse Pro!',
+                text: `Hello ${user.name},\n\nYour membership for ${user.membershipDuration} month(s) has been approved! You can now log in to your account and start your fitness journey.\n\nBest regards,\nThe FitPulse Pro Team`,
+                html: `<p>Hello <b>${user.name}</b>,</p><p>Your membership for ${user.membershipDuration} month(s) has been <b>approved</b>! You can now log in to your account and start your fitness journey.</p><p>Best regards,<br>The FitPulse Pro Team</p>`
+            };
+
+            const info = await transporter.sendMail(mailOptions);
+            console.log('Approval email sent! Preview URL: %s', nodemailer.getTestMessageUrl(info));
+        } catch (emailError) {
+            console.error('Error sending approval email:', emailError);
+        }
+
+        res.json({ message: 'User approved and email sent' });
+    } else {
+        res.status(404).json({ message: 'User not found' });
+    }
 });
 
 // @desc    Delete user

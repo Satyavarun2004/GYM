@@ -177,8 +177,13 @@ router.get('/analytics', protect, async (req, res) => {
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
+        let targetId = req.user._id;
+        if (req.user.role === 'admin' && req.query.userId) {
+            targetId = req.query.userId;
+        }
+
         const activities = await Activity.find({
-            user: req.user._id,
+            user: targetId,
             date: { $gte: sevenDaysAgo }
         }).sort({ date: 1 });
 
@@ -228,7 +233,11 @@ router.get('/analytics', protect, async (req, res) => {
 // @route   GET /api/activities
 // @access  Private
 router.get('/', protect, async (req, res) => {
-    const activities = await Activity.find({ user: req.user._id }).sort({ createdAt: -1 });
+    let targetId = req.user._id;
+    if (req.user.role === 'admin' && req.query.userId) {
+        targetId = req.query.userId;
+    }
+    const activities = await Activity.find({ user: targetId }).sort({ createdAt: -1 });
     res.json(activities);
 });
 

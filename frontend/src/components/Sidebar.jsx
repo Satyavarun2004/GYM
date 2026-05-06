@@ -25,7 +25,7 @@ const Sidebar = () => {
         { name: 'Exercises', icon: Dumbbell, path: '/exercises' },
         { name: 'AI Coach', icon: Bot, path: '/ai-coach' },
         { name: 'Leaderboard', icon: Award, path: '/leaderboard' },
-        ...(user?.role === 'admin' ? [{ name: 'Admin Chat', icon: MessageCircle, path: '/admin-chat' }] : []),
+        { name: 'Chat', icon: MessageCircle, path: '/admin-chat' },
     ];
 
     const NavContent = () => (

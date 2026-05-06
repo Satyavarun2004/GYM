@@ -1,13 +1,14 @@
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Dumbbell, ClipboardList, PlusCircle, Star, Utensils, LogOut } from 'lucide-react';
+import { Users, Dumbbell, ClipboardList, PlusCircle, Star, Utensils, LogOut, Shield } from 'lucide-react';
 import PageTransition from '../../components/PageTransition';
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import { useContext } from 'react';
 import AuthContext from '../../context/AuthContext';
 
-const TrainerDashboard = () => {
+const TrainerDashboard = ({ targetUserId = null }) => {
+    const isAdminView = !!targetUserId;
     const { logout } = useContext(AuthContext);
     const navigate = useNavigate();
     const [showChallengeModal, setShowChallengeModal] = useState(false);
@@ -28,27 +29,20 @@ const TrainerDashboard = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch all challenges (we will filter on frontend for now, or backend returns all)
-                // Ideally backend should support /my-challenges, but filtering by creator logic is simple
+                // Fetch all challenges
                 const challengesRes = await api.get('/challenges');
-                // Filter challenges created by this user (logic depends on if backend returns populated creator or just ID)
-                // Backend returns populated 'creator'. 
-                // We check if creator.name or creator._id matches. 
-                // Actually better to check ID. We'll filtering roughly for now.
-                setChallenges(challengesRes.data.filter(c => c.creator?._id === challengesRes.data[0]?.creator?._id || true));
-                // Wait, simply displaying all public challenges is actually fine for a "System Challenges" view 
-                // but for "Active Challenges" card, let's just show the latest few.
                 setChallenges(challengesRes.data);
 
-                // Fetch Trainees
-                const traineesRes = await api.get('/users/my-trainees');
+                // Fetch Trainees - If admin view, we might want to see THAT trainer's trainees
+                const traineesUrl = isAdminView ? `/users/my-trainees?userId=${targetUserId}` : '/users/my-trainees';
+                const traineesRes = await api.get(traineesUrl);
                 setTrainees(traineesRes.data);
             } catch (error) {
                 console.error('Error fetching trainer data', error);
             }
         };
         fetchData();
-    }, []);
+    }, [isAdminView, targetUserId]);
 
     const handleCreateChallenge = async (e) => {
         e.preventDefault();
@@ -117,13 +111,22 @@ const TrainerDashboard = () => {
                             Certified Trainer
                         </span>
                     </div>
-                    <button
-                        onClick={handleLogout}
-                        className="p-2 rounded-xl bg-white/5 border border-white/10 text-red-400 hover:bg-red-500/10 transition-all"
-                        title="Sign Out"
-                    >
-                        <LogOut size={20} />
-                    </button>
+                    <div className="flex items-center gap-3">
+                        {!isAdminView ? (
+                            <button
+                                onClick={handleLogout}
+                                className="p-2 rounded-xl bg-white/5 border border-white/10 text-red-400 hover:bg-red-500/10 transition-all"
+                                title="Sign Out"
+                            >
+                                <LogOut size={20} />
+                            </button>
+                        ) : (
+                            <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-xl text-primary-light font-bold text-sm">
+                                <Shield size={16} />
+                                Admin Performance View
+                            </div>
+                        )}
+                    </div>
                 </header>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -156,22 +159,24 @@ const TrainerDashboard = () => {
                     </div>
                 </div>
 
-                <div className="flex gap-4 flex-wrap">
-                    <button
-                        onClick={() => setShowChallengeModal(true)}
-                        className="btn-primary flex items-center gap-2"
-                    >
-                        <PlusCircle size={18} />
-                        Create Challenge
-                    </button>
-                    <button
-                        onClick={() => setShowDietModal(true)}
-                        className="btn-secondary flex items-center gap-2"
-                    >
-                        <Utensils size={18} />
-                        Create Diet Plan
-                    </button>
-                </div>
+                {!isAdminView && (
+                    <div className="flex gap-4 flex-wrap">
+                        <button
+                            onClick={() => setShowChallengeModal(true)}
+                            className="btn-primary flex items-center gap-2"
+                        >
+                            <PlusCircle size={18} />
+                            Create Challenge
+                        </button>
+                        <button
+                            onClick={() => setShowDietModal(true)}
+                            className="btn-secondary flex items-center gap-2"
+                        >
+                            <Utensils size={18} />
+                            Create Diet Plan
+                        </button>
+                    </div>
+                )}
 
                 {showChallengeModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">

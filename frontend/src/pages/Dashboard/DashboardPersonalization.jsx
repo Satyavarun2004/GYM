@@ -7,12 +7,14 @@ import AuthContext from '../../context/AuthContext';
 import api from '../../api/axios';
 import { bmiPlans } from '../../data/bmiPlans';
 
-const DashboardPersonalization = ({ dailyBurned = 0, dailyIntake = 0 }) => {
-    const { user, setUser } = useContext(AuthContext);
+const DashboardPersonalization = ({ dailyBurned = 0, dailyIntake = 0, targetUser = null }) => {
+    const { user: authUser, setUser } = useContext(AuthContext);
+    const user = targetUser || authUser;
+    const isAdminView = !!targetUser;
     const [weight, setWeight] = useState(user?.weight || '');
     const [height, setHeight] = useState(user?.height || '');
     const [weightHistory, setWeightHistory] = useState([]);
-    const [showUpdate, setShowUpdate] = useState(!user?.bmi);
+    const [showUpdate, setShowUpdate] = useState(!user?.bmi && !isAdminView);
 
     const calculateBMI = (w, h) => {
         if (!w || !h) return 0;
@@ -39,8 +41,10 @@ const DashboardPersonalization = ({ dailyBurned = 0, dailyIntake = 0 }) => {
             const updatedUser = { ...data, token: user.token };
 
             // Update both Context and LocalStorage
-            setUser(updatedUser);
-            localStorage.setItem('user', JSON.stringify(updatedUser));
+            if (!isAdminView) {
+                setUser(updatedUser);
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+            }
 
             setShowUpdate(false);
             fetchWeightHistory();
@@ -51,7 +55,8 @@ const DashboardPersonalization = ({ dailyBurned = 0, dailyIntake = 0 }) => {
 
     const fetchWeightHistory = async () => {
         try {
-            const { data } = await api.get('/weight');
+            const url = isAdminView ? `/weight?userId=${user._id}` : '/weight';
+            const { data } = await api.get(url);
             setWeightHistory(data.map(log => ({
                 date: new Date(log.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
                 weight: log.weight
@@ -112,12 +117,14 @@ const DashboardPersonalization = ({ dailyBurned = 0, dailyIntake = 0 }) => {
                             <p className="text-dark-muted font-medium mb-6">
                                 {plan?.message || 'Update your weight and height to generate your personalized fitness roadmap.'}
                             </p>
-                            <button
-                                onClick={() => setShowUpdate(true)}
-                                className="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm font-bold transition-all uppercase tracking-widest"
-                            >
-                                Update Stats
-                            </button>
+                            {!isAdminView && (
+                                <button
+                                    onClick={() => setShowUpdate(true)}
+                                    className="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm font-bold transition-all uppercase tracking-widest"
+                                >
+                                    Update Stats
+                                </button>
+                            )}
                         </div>
                     </div>
                 </motion.div>

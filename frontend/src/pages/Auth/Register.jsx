@@ -1,8 +1,8 @@
 import { useState, useContext } from 'react';
 import AuthContext from '../../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { UserPlus, Zap } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { UserPlus, Zap, QrCode, CreditCard, X } from 'lucide-react';
 
 const Register = () => {
     const [name, setName] = useState('');
@@ -15,9 +15,13 @@ const Register = () => {
     const [height, setHeight] = useState('');
     const [weight, setWeight] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
+    const [membershipDuration, setMembershipDuration] = useState('1');
+    const [paymentMethod, setPaymentMethod] = useState('UPI');
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
     const { register } = useContext(AuthContext);
     const navigate = useNavigate();
     const [error, setError] = useState('');
+    const [successMsg, setSuccessMsg] = useState('');
 
     const validateForm = () => {
         if (name.length < 2) {
@@ -59,14 +63,29 @@ const Register = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setSuccessMsg('');
 
         if (!validateForm()) return;
 
+        if (role === 'customer') {
+            setShowPaymentModal(true);
+        } else {
+            completeRegistration();
+        }
+    };
+
+    const completeRegistration = async () => {
         try {
-            await register({ name, email, password, role, age, experience, gender, height, weight, phoneNumber });
-            navigate('/dashboard');
+            const data = await register({ name, email, password, role, age, experience, gender, height, weight, phoneNumber, membershipDuration, paymentMethod });
+            if (data?.status === 'pending') {
+                setSuccessMsg(data.message || 'Registration successful. Waiting for admin approval.');
+                setShowPaymentModal(false);
+            } else {
+                navigate('/dashboard');
+            }
         } catch (err) {
             setError(err.response?.data?.message || 'Registration failed');
+            setShowPaymentModal(false);
         }
     };
 
@@ -103,142 +122,266 @@ const Register = () => {
                     </motion.div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Full Name</label>
-                        <input
-                            type="text"
-                            className="input-field"
-                            placeholder="John Doe"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Email Address</label>
-                        <input
-                            type="email"
-                            className="input-field"
-                            placeholder="name@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Password</label>
-                        <input
-                            type="password"
-                            className="input-field"
-                            placeholder="••••••••"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                        />
-                    </div>
+                {successMsg && (
+                    <motion.div
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="bg-green-500/10 border border-green-500/20 text-green-500 px-4 py-3 rounded-xl mb-6 text-sm font-medium"
+                    >
+                        {successMsg}
+                    </motion.div>
+                )}
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Age</label>
-                            <input
-                                type="number"
-                                className="input-field"
-                                placeholder="25"
-                                value={age}
-                                onChange={(e) => setAge(e.target.value)}
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Gender</label>
-                            <select
-                                className="input-field appearance-none"
-                                value={gender}
-                                onChange={(e) => setGender(e.target.value)}
-                            >
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                    </div>
+                {!successMsg ? (
+                    <>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Full Name</label>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    placeholder="John Doe"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Email Address</label>
+                                <input
+                                    type="email"
+                                    className="input-field"
+                                    placeholder="name@example.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Password</label>
+                                <input
+                                    type="password"
+                                    className="input-field"
+                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                />
+                            </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Height (cm)</label>
-                            <input
-                                type="number"
-                                className="input-field"
-                                placeholder="175"
-                                value={height}
-                                onChange={(e) => setHeight(e.target.value)}
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Weight (kg)</label>
-                            <input
-                                type="number"
-                                className="input-field"
-                                placeholder="70"
-                                value={weight}
-                                onChange={(e) => setWeight(e.target.value)}
-                                required
-                            />
-                        </div>
-                    </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Age</label>
+                                    <input
+                                        type="number"
+                                        className="input-field"
+                                        placeholder="25"
+                                        value={age}
+                                        onChange={(e) => setAge(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Gender</label>
+                                    <select
+                                        className="input-field appearance-none"
+                                        value={gender}
+                                        onChange={(e) => setGender(e.target.value)}
+                                    >
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Experience (Years)</label>
-                            <input
-                                type="number"
-                                className="input-field"
-                                placeholder="0"
-                                value={experience}
-                                onChange={(e) => setExperience(e.target.value)}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Phone Number</label>
-                            <input
-                                type="tel"
-                                className="input-field"
-                                placeholder="+1234567890"
-                                value={phoneNumber}
-                                onChange={(e) => setPhoneNumber(e.target.value)}
-                            />
-                        </div>
-                    </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Height (cm)</label>
+                                    <input
+                                        type="number"
+                                        className="input-field"
+                                        placeholder="175"
+                                        value={height}
+                                        onChange={(e) => setHeight(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Weight (kg)</label>
+                                    <input
+                                        type="number"
+                                        className="input-field"
+                                        placeholder="70"
+                                        value={weight}
+                                        onChange={(e) => setWeight(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                            </div>
 
-                    <div>
-                        <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Role</label>
-                        <select
-                            className="input-field appearance-none"
-                            value={role}
-                            onChange={(e) => setRole(e.target.value)}
-                        >
-                            <option value="customer">Member</option>
-                            <option value="trainer">Trainer</option>
-                            <option value="admin">Admin</option>
-                        </select>
-                    </div>
-                    <div className="pt-2">
-                        <button type="submit" className="btn-primary w-full flex items-center justify-center gap-3">
-                            <UserPlus size={20} />
-                            Start Journey
-                        </button>
-                    </div>
-                </form>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Experience (Years)</label>
+                                    <input
+                                        type="number"
+                                        className="input-field"
+                                        placeholder="0"
+                                        value={experience}
+                                        onChange={(e) => setExperience(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Phone Number</label>
+                                    <input
+                                        type="tel"
+                                        className="input-field"
+                                        placeholder="+1234567890"
+                                        value={phoneNumber}
+                                        onChange={(e) => setPhoneNumber(e.target.value)}
+                                    />
+                                </div>
+                            </div>
 
-                <p className="mt-8 text-center text-dark-muted text-sm font-medium">
-                    Already a member?{' '}
-                    <Link to="/login" className="text-primary-light hover:text-white transition-colors font-bold ml-1">
-                        Sign in
-                    </Link>
-                </p>
+                            <div>
+                                <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Role</label>
+                                <select
+                                    className="input-field appearance-none"
+                                    value={role}
+                                    onChange={(e) => setRole(e.target.value)}
+                                >
+                                    <option value="customer">Member</option>
+                                    <option value="trainer">Trainer</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+
+                            {role === 'customer' && (
+                                <>
+                                    <div>
+                                        <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Membership Duration</label>
+                                        <select
+                                            className="input-field appearance-none"
+                                            value={membershipDuration}
+                                            onChange={(e) => setMembershipDuration(e.target.value)}
+                                        >
+                                            <option value="1">1 Month (₹1000)</option>
+                                            <option value="3">3 Months (₹2700 - 10% off)</option>
+                                            <option value="6">6 Months (₹4800 - 20% off)</option>
+                                            <option value="12">12 Months (₹8400 - 30% off)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Payment Method</label>
+                                        <select
+                                            className="input-field appearance-none"
+                                            value={paymentMethod}
+                                            onChange={(e) => setPaymentMethod(e.target.value)}
+                                        >
+                                            <option value="UPI">UPI (GPay, PhonePe, Paytm)</option>
+                                            <option value="Credit Card">Credit Card / Debit Card</option>
+                                        </select>
+                                    </div>
+                                </>
+                            )}
+                            <div className="pt-2">
+                                <button type="submit" className="btn-primary w-full flex items-center justify-center gap-3">
+                                    <UserPlus size={20} />
+                                    Start Journey
+                                </button>
+                            </div>
+                        </form>
+
+                        <p className="mt-8 text-center text-dark-muted text-sm font-medium">
+                            Already a member?{' '}
+                            <Link to="/login" className="text-primary-light hover:text-white transition-colors font-bold ml-1">
+                                Sign in
+                            </Link>
+                        </p>
+                    </>
+                ) : (
+                    <div className="text-center mt-8">
+                        <Link to="/login" className="btn-primary inline-flex items-center justify-center gap-3">
+                            Go to Login
+                        </Link>
+                    </div>
+                )}
             </motion.div>
+
+            {/* Payment Modal Overlay */}
+            <AnimatePresence>
+                {showPaymentModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-dark-card border border-white/10 rounded-3xl p-8 max-w-md w-full relative shadow-2xl"
+                        >
+                            <button
+                                onClick={() => setShowPaymentModal(false)}
+                                className="absolute top-4 right-4 p-2 text-dark-muted hover:text-white bg-white/5 rounded-full transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                            
+                            <h3 className="text-2xl font-bold text-white mb-2 text-center">Complete Payment</h3>
+                            <p className="text-dark-muted text-center text-sm mb-8">
+                                Please complete your simulated payment to finish registration.
+                            </p>
+
+                            {paymentMethod === 'UPI' ? (
+                                <div className="flex flex-col items-center">
+                                    <div className="w-48 h-48 bg-white rounded-2xl flex items-center justify-center mb-6 shadow-glow-purple">
+                                        <QrCode size={120} className="text-black" />
+                                    </div>
+                                    <p className="text-primary-light font-bold mb-6 tracking-widest uppercase">Scan with any UPI App</p>
+                                    <button
+                                        onClick={completeRegistration}
+                                        className="btn-primary w-full shadow-glow-purple"
+                                    >
+                                        Simulate Scan & Pay
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 mb-6">
+                                        <CreditCard className="text-primary-light" size={24} />
+                                        <span className="text-white font-bold tracking-widest uppercase">Card Details</span>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Card Number</label>
+                                        <input type="text" placeholder="0000 0000 0000 0000" className="input-field font-mono" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Expiry</label>
+                                            <input type="text" placeholder="MM/YY" className="input-field font-mono text-center" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">CVV</label>
+                                            <input type="password" placeholder="***" className="input-field font-mono text-center" />
+                                        </div>
+                                    </div>
+                                    <div className="pt-4">
+                                        <button
+                                            onClick={completeRegistration}
+                                            className="btn-primary w-full shadow-glow-purple"
+                                        >
+                                            Pay Securely
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
