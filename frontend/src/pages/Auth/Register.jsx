@@ -1,8 +1,9 @@
 import { useState, useContext } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import AuthContext from '../../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { UserPlus, Zap, QrCode, CreditCard, X } from 'lucide-react';
+import { UserPlus, Zap, ArrowRight, Clock, CheckCircle2, Shield } from 'lucide-react';
+import PaymentStep from './PaymentStep';
 
 const Register = () => {
     const [name, setName] = useState('');
@@ -15,77 +16,54 @@ const Register = () => {
     const [height, setHeight] = useState('');
     const [weight, setWeight] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
-    const [membershipDuration, setMembershipDuration] = useState('1');
-    const [paymentMethod, setPaymentMethod] = useState('UPI');
-    const [showPaymentModal, setShowPaymentModal] = useState(false);
     const { register } = useContext(AuthContext);
     const navigate = useNavigate();
     const [error, setError] = useState('');
-    const [successMsg, setSuccessMsg] = useState('');
+    const [step, setStep] = useState(1); // 1: Details, 2: Payment, 3: Pending
 
     const validateForm = () => {
         if (name.length < 2) {
             setError('Name must be at least 2 characters');
             return false;
         }
-
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             setError('Invalid email format');
             return false;
         }
-
-        // Password validation: 8+ chars, 1 upper, 1 lower, 1 number, 1 special char
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{8,}$/;
         if (!passwordRegex.test(password)) {
-            setError('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character');
+            setError('Password must be 8+ chars, with upper, lower, number & symbol');
             return false;
         }
-
-        if (age < 13 || age > 120) {
-            setError('Age must be between 13 and 120');
-            return false;
-        }
-
-        if (height < 50 || height > 300) {
-            setError('Height must be between 50 and 300 cm');
-            return false;
-        }
-
-        if (weight < 30 || weight > 500) {
-            setError('Weight must be between 30 and 500 kg');
-            return false;
-        }
-
         return true;
     };
 
-    const handleSubmit = async (e) => {
+    const handleNextStep = (e) => {
         e.preventDefault();
         setError('');
-        setSuccessMsg('');
-
-        if (!validateForm()) return;
-
-        if (role === 'customer') {
-            setShowPaymentModal(true);
-        } else {
-            completeRegistration();
+        if (validateForm()) {
+            setStep(2);
         }
     };
 
-    const completeRegistration = async () => {
+    const handleRegister = async (selectedPlan) => {
+        setError('');
         try {
-            const data = await register({ name, email, password, role, age, experience, gender, height, weight, phoneNumber, membershipDuration, paymentMethod });
-            if (data?.status === 'pending') {
-                setSuccessMsg(data.message || 'Registration successful. Waiting for admin approval.');
-                setShowPaymentModal(false);
-            } else {
+            const data = await register({ 
+                name, email, password, role, age: Number(age), experience: Number(experience), 
+                gender, height: Number(height), weight: Number(weight), phoneNumber, 
+                plan: selectedPlan 
+            });
+
+            if (data.isApproved || data.role === 'admin') {
                 navigate('/dashboard');
+            } else {
+                setStep(3); // Go to pending screen
             }
         } catch (err) {
             setError(err.response?.data?.message || 'Registration failed');
-            setShowPaymentModal(false);
+            setStep(1); 
         }
     };
 
@@ -101,18 +79,22 @@ const Register = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 className="glass-card p-10 w-full max-w-md z-10 mx-4 border-white/10"
             >
-                <div className="text-center mb-10">
-                    <div className="w-16 h-16 bg-gradient-to-tr from-primary to-secondary rounded-2xl flex items-center justify-center shadow-glow-purple mx-auto mb-6">
-                        <Zap className="text-white" size={32} fill="white" />
+                {step !== 3 && (
+                    <div className="text-center mb-10">
+                        <div className="w-16 h-16 bg-gradient-to-tr from-primary to-secondary rounded-2xl flex items-center justify-center shadow-glow-purple mx-auto mb-6">
+                            <Zap className="text-white" size={32} fill="white" />
+                        </div>
+                        <h2 className="text-4xl font-extrabold tracking-tight mb-2">
+                            <span className="text-white">Fit</span>
+                            <span className="text-gradient">Pulse</span>
+                        </h2>
+                        <p className="text-dark-muted font-medium">
+                            {step === 1 ? 'Join the elite fitness community' : 'Finalize your membership'}
+                        </p>
                     </div>
-                    <h2 className="text-4xl font-extrabold tracking-tight mb-2">
-                        <span className="text-white">Fit</span>
-                        <span className="text-gradient">Pulse</span>
-                    </h2>
-                    <p className="text-dark-muted font-medium">Join the elite fitness community</p>
-                </div>
+                )}
 
-                {error && (
+                {error && step !== 3 && (
                     <motion.div
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -122,266 +104,140 @@ const Register = () => {
                     </motion.div>
                 )}
 
-                {successMsg && (
-                    <motion.div
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="bg-green-500/10 border border-green-500/20 text-green-500 px-4 py-3 rounded-xl mb-6 text-sm font-medium"
-                    >
-                        {successMsg}
-                    </motion.div>
-                )}
-
-                {!successMsg ? (
-                    <>
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Full Name</label>
-                                <input
-                                    type="text"
-                                    className="input-field"
-                                    placeholder="John Doe"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Email Address</label>
-                                <input
-                                    type="email"
-                                    className="input-field"
-                                    placeholder="name@example.com"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Password</label>
-                                <input
-                                    type="password"
-                                    className="input-field"
-                                    placeholder="••••••••"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
+                <AnimatePresence mode="wait">
+                    {step === 1 ? (
+                        <motion.form
+                            key="step1"
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            onSubmit={handleNextStep} 
+                            className="space-y-4"
+                        >
+                            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                                 <div>
-                                    <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Age</label>
-                                    <input
-                                        type="number"
-                                        className="input-field"
-                                        placeholder="25"
-                                        value={age}
-                                        onChange={(e) => setAge(e.target.value)}
-                                        required
-                                    />
+                                    <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Full Name</label>
+                                    <input type="text" className="input-field" placeholder="John Doe" value={name} onChange={(e) => setName(e.target.value)} required />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Gender</label>
-                                    <select
-                                        className="input-field appearance-none"
-                                        value={gender}
-                                        onChange={(e) => setGender(e.target.value)}
-                                    >
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Height (cm)</label>
-                                    <input
-                                        type="number"
-                                        className="input-field"
-                                        placeholder="175"
-                                        value={height}
-                                        onChange={(e) => setHeight(e.target.value)}
-                                        required
-                                    />
+                                    <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Email Address</label>
+                                    <input type="email" className="input-field" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Weight (kg)</label>
-                                    <input
-                                        type="number"
-                                        className="input-field"
-                                        placeholder="70"
-                                        value={weight}
-                                        onChange={(e) => setWeight(e.target.value)}
-                                        required
-                                    />
+                                    <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Password</label>
+                                    <input type="password" className="input-field" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
                                 </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Experience (Years)</label>
-                                    <input
-                                        type="number"
-                                        className="input-field"
-                                        placeholder="0"
-                                        value={experience}
-                                        onChange={(e) => setExperience(e.target.value)}
-                                    />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Age</label>
+                                        <input type="number" className="input-field" placeholder="25" value={age} onChange={(e) => setAge(e.target.value)} required />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Gender</label>
+                                        <select className="input-field appearance-none" value={gender} onChange={(e) => setGender(e.target.value)}>
+                                            <option value="Male">Male</option>
+                                            <option value="Female">Female</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Height (cm)</label>
+                                        <input type="number" className="input-field" placeholder="175" value={height} onChange={(e) => setHeight(e.target.value)} required />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Weight (kg)</label>
+                                        <input type="number" className="input-field" placeholder="70" value={weight} onChange={(e) => setWeight(e.target.value)} required />
+                                    </div>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Phone Number</label>
-                                    <input
-                                        type="tel"
-                                        className="input-field"
-                                        placeholder="+1234567890"
-                                        value={phoneNumber}
-                                        onChange={(e) => setPhoneNumber(e.target.value)}
-                                    />
+                                    <input type="tel" className="input-field" placeholder="+1234567890" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Role</label>
+                                    <select className="input-field appearance-none" value={role} onChange={(e) => setRole(e.target.value)}>
+                                        <option value="customer">Member</option>
+                                        <option value="trainer">Trainer</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
                                 </div>
                             </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Role</label>
-                                <select
-                                    className="input-field appearance-none"
-                                    value={role}
-                                    onChange={(e) => setRole(e.target.value)}
-                                >
-                                    <option value="customer">Member</option>
-                                    <option value="trainer">Trainer</option>
-                                    <option value="admin">Admin</option>
-                                </select>
-                            </div>
-
-                            {role === 'customer' && (
-                                <>
-                                    <div>
-                                        <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Membership Duration</label>
-                                        <select
-                                            className="input-field appearance-none"
-                                            value={membershipDuration}
-                                            onChange={(e) => setMembershipDuration(e.target.value)}
-                                        >
-                                            <option value="1">1 Month (₹1000)</option>
-                                            <option value="3">3 Months (₹2700 - 10% off)</option>
-                                            <option value="6">6 Months (₹4800 - 20% off)</option>
-                                            <option value="12">12 Months (₹8400 - 30% off)</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Payment Method</label>
-                                        <select
-                                            className="input-field appearance-none"
-                                            value={paymentMethod}
-                                            onChange={(e) => setPaymentMethod(e.target.value)}
-                                        >
-                                            <option value="UPI">UPI (GPay, PhonePe, Paytm)</option>
-                                            <option value="Credit Card">Credit Card / Debit Card</option>
-                                        </select>
-                                    </div>
-                                </>
-                            )}
                             <div className="pt-2">
                                 <button type="submit" className="btn-primary w-full flex items-center justify-center gap-3">
-                                    <UserPlus size={20} />
-                                    Start Journey
+                                    Next Step
+                                    <ArrowRight size={20} />
                                 </button>
                             </div>
-                        </form>
-
-                        <p className="mt-8 text-center text-dark-muted text-sm font-medium">
-                            Already a member?{' '}
-                            <Link to="/login" className="text-primary-light hover:text-white transition-colors font-bold ml-1">
-                                Sign in
-                            </Link>
-                        </p>
-                    </>
-                ) : (
-                    <div className="text-center mt-8">
-                        <Link to="/login" className="btn-primary inline-flex items-center justify-center gap-3">
-                            Go to Login
-                        </Link>
-                    </div>
-                )}
-            </motion.div>
-
-            {/* Payment Modal Overlay */}
-            <AnimatePresence>
-                {showPaymentModal && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-                    >
+                        </motion.form>
+                    ) : step === 2 ? (
                         <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-dark-card border border-white/10 rounded-3xl p-8 max-w-md w-full relative shadow-2xl"
+                            key="step2"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
                         >
-                            <button
-                                onClick={() => setShowPaymentModal(false)}
-                                className="absolute top-4 right-4 p-2 text-dark-muted hover:text-white bg-white/5 rounded-full transition-colors"
-                            >
-                                <X size={20} />
-                            </button>
-                            
-                            <h3 className="text-2xl font-bold text-white mb-2 text-center">Complete Payment</h3>
-                            <p className="text-dark-muted text-center text-sm mb-8">
-                                Please complete your simulated payment to finish registration.
-                            </p>
-
-                            {paymentMethod === 'UPI' ? (
-                                <div className="flex flex-col items-center">
-                                    <div className="w-48 h-48 bg-white rounded-2xl flex items-center justify-center mb-6 shadow-glow-purple">
-                                        <QrCode size={120} className="text-black" />
-                                    </div>
-                                    <p className="text-primary-light font-bold mb-6 tracking-widest uppercase">Scan with any UPI App</p>
-                                    <button
-                                        onClick={completeRegistration}
-                                        className="btn-primary w-full shadow-glow-purple"
-                                    >
-                                        Simulate Scan & Pay
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-2 mb-6">
-                                        <CreditCard className="text-primary-light" size={24} />
-                                        <span className="text-white font-bold tracking-widest uppercase">Card Details</span>
+                            <PaymentStep 
+                                onComplete={handleRegister} 
+                                onBack={() => setStep(1)} 
+                            />
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key="step3"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="text-center py-6 space-y-6"
+                        >
+                            <div className="w-20 h-20 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto border border-orange-500/30 shadow-glow-orange">
+                                <Clock size={40} className="text-orange-400 animate-pulse" />
+                            </div>
+                            <div>
+                                <h3 className="text-3xl font-black text-white uppercase tracking-tight">Pending Approval</h3>
+                                <p className="text-dark-muted mt-4 font-medium leading-relaxed">
+                                    Your application and payment have been received. An administrator will review your request shortly.
+                                </p>
+                            </div>
+                            <div className="glass-card p-6 border-white/5 bg-white/5 space-y-4">
+                                <div className="flex items-center gap-3 text-left">
+                                    <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500">
+                                        <CheckCircle2 size={20} />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Card Number</label>
-                                        <input type="text" placeholder="0000 0000 0000 0000" className="input-field font-mono" />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">Expiry</label>
-                                            <input type="text" placeholder="MM/YY" className="input-field font-mono text-center" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-dark-muted uppercase tracking-widest mb-1 ml-1">CVV</label>
-                                            <input type="password" placeholder="***" className="input-field font-mono text-center" />
-                                        </div>
-                                    </div>
-                                    <div className="pt-4">
-                                        <button
-                                            onClick={completeRegistration}
-                                            className="btn-primary w-full shadow-glow-purple"
-                                        >
-                                            Pay Securely
-                                        </button>
+                                        <p className="text-xs font-black text-white uppercase tracking-widest">Payment Verified</p>
+                                        <p className="text-[10px] text-dark-muted font-bold uppercase tracking-widest">Transaction Secure</p>
                                     </div>
                                 </div>
-                            )}
+                                <div className="flex items-center gap-3 text-left">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                                        <Shield size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-black text-white uppercase tracking-widest">Profile Queued</p>
+                                        <p className="text-[10px] text-dark-muted font-bold uppercase tracking-widest">Waiting for Gatekeeper</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => navigate('/login')}
+                                className="btn-primary w-full py-4 font-black uppercase tracking-widest text-sm"
+                            >
+                                Back to Login
+                            </button>
                         </motion.div>
-                    </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {step !== 3 && (
+                    <p className="mt-8 text-center text-dark-muted text-sm font-medium">
+                        Already a member?{' '}
+                        <Link to="/login" className="text-primary-light hover:text-white transition-colors font-bold ml-1">
+                            Sign in
+                        </Link>
+                    </p>
                 )}
-            </AnimatePresence>
+            </motion.div>
         </div>
     );
 };

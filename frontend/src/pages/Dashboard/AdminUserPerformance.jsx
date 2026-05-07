@@ -1,10 +1,11 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import CustomerDashboard from './CustomerDashboard';
 import TrainerDashboard from './TrainerDashboard';
 import PageTransition from '../../components/PageTransition';
-import { ChevronLeft, Loader2 } from 'lucide-react';
+import { Shield, ChevronLeft, AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const AdminUserPerformance = () => {
     const { id } = useParams();
@@ -16,26 +17,28 @@ const AdminUserPerformance = () => {
     useEffect(() => {
         const fetchTargetUser = async () => {
             try {
-                // Fetch the profile of the target user to know their role
+                // Fetch the profile of the user we want to view
                 const { data } = await api.get(`/users/profile?userId=${id}`);
                 setTargetUser(data);
                 setLoading(false);
             } catch (err) {
-                console.error('Error fetching target user performance', err);
-                setError('Failed to load user data');
+                console.error('Failed to fetch target user', err);
+                setError('User not found or access denied');
                 setLoading(false);
             }
         };
 
-        fetchTargetUser();
+        if (id) {
+            fetchTargetUser();
+        }
     }, [id]);
 
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-dark-bg text-white">
                 <div className="flex flex-col items-center gap-4">
-                    <Loader2 size={40} className="text-primary animate-spin" />
-                    <p className="text-dark-muted animate-pulse">Loading Performance Data...</p>
+                    <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-sm font-bold uppercase tracking-widest opacity-50 text-gradient">Securing Data Stream...</p>
                 </div>
             </div>
         );
@@ -43,31 +46,50 @@ const AdminUserPerformance = () => {
 
     if (error || !targetUser) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-dark-bg text-white">
-                <div className="text-center space-y-4">
-                    <p className="text-red-400 font-bold">{error || 'User not found'}</p>
-                    <button onClick={() => navigate('/dashboard')} className="btn-secondary">Back to Admin Panel</button>
+            <div className="min-h-screen flex flex-col items-center justify-center bg-dark-bg p-6 text-center">
+                <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mb-6 border border-red-500/20">
+                    <AlertCircle size={40} className="text-red-500" />
                 </div>
+                <h2 className="text-2xl font-bold text-white mb-2">Access Denied</h2>
+                <p className="text-dark-muted mb-8 max-w-sm">{error || 'The requested performance profile is currently unavailable.'}</p>
+                <button 
+                    onClick={() => navigate('/dashboard')}
+                    className="btn-primary px-8 py-3 rounded-xl flex items-center gap-2"
+                >
+                    <ChevronLeft size={20} />
+                    Back to Terminal
+                </button>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-dark-bg">
-            <div className="max-w-7xl mx-auto px-4 py-6">
-                <button 
-                    onClick={() => navigate('/dashboard')}
-                    className="flex items-center gap-2 text-dark-muted hover:text-white transition-colors mb-6 group"
-                >
-                    <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-                    Back to Admin Dashboard
-                </button>
-
-                <div className="mb-10">
-                    <h2 className="text-2xl font-bold text-white">
-                        Viewing Performance: <span className="text-gradient">{targetUser.name}</span>
-                    </h2>
-                    <p className="text-dark-muted text-sm uppercase tracking-widest font-bold">Role: {targetUser.role}</p>
+        <PageTransition>
+            <div className="space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-primary/10 p-6 rounded-[2rem] border border-primary/20 shadow-glow-purple/20">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-primary text-white rounded-2xl shadow-lg">
+                            <Shield size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-black text-white uppercase tracking-tight">Performance Intelligence</h2>
+                            <p className="text-primary-light text-xs font-bold uppercase tracking-widest">
+                                Viewing {targetUser.name}'s Dashboard
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-black uppercase text-dark-muted tracking-[0.2em] bg-black/40 px-3 py-1.5 rounded-lg border border-white/5">
+                            Read-Only Protocol
+                        </span>
+                        <button 
+                            onClick={() => navigate('/dashboard')}
+                            className="p-3 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/5 transition-all flex items-center gap-2 text-xs font-black uppercase tracking-widest"
+                        >
+                            <ChevronLeft size={16} />
+                            Exit View
+                        </button>
+                    </div>
                 </div>
 
                 {targetUser.role === 'trainer' ? (
@@ -76,7 +98,7 @@ const AdminUserPerformance = () => {
                     <CustomerDashboard targetUserId={id} />
                 )}
             </div>
-        </div>
+        </PageTransition>
     );
 };
 

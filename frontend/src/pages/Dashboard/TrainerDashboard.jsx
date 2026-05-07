@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Dumbbell, ClipboardList, PlusCircle, Star, Utensils, LogOut, Shield } from 'lucide-react';
+import { Users, Dumbbell, ClipboardList, PlusCircle, Star, Utensils, LogOut } from 'lucide-react';
 import PageTransition from '../../components/PageTransition';
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
@@ -8,8 +8,8 @@ import { useContext } from 'react';
 import AuthContext from '../../context/AuthContext';
 
 const TrainerDashboard = ({ targetUserId = null }) => {
-    const isAdminView = !!targetUserId;
     const { logout } = useContext(AuthContext);
+    const isAdminView = !!targetUserId;
     const navigate = useNavigate();
     const [showChallengeModal, setShowChallengeModal] = useState(false);
     const [title, setTitle] = useState('');
@@ -27,22 +27,23 @@ const TrainerDashboard = ({ targetUserId = null }) => {
     const [dietDescription, setDietDescription] = useState('');
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchTrainerData = async () => {
             try {
-                // Fetch all challenges
-                const challengesRes = await api.get('/challenges');
-                setChallenges(challengesRes.data);
-
-                // Fetch Trainees - If admin view, we might want to see THAT trainer's trainees
                 const traineesUrl = isAdminView ? `/users/my-trainees?userId=${targetUserId}` : '/users/my-trainees';
-                const traineesRes = await api.get(traineesUrl);
+                const challengesUrl = isAdminView ? `/challenges?userId=${targetUserId}` : '/challenges';
+                
+                const [traineesRes, challengesRes] = await Promise.all([
+                    api.get(traineesUrl),
+                    api.get(challengesUrl)
+                ]);
                 setTrainees(traineesRes.data);
+                setChallenges(challengesRes.data);
             } catch (error) {
                 console.error('Error fetching trainer data', error);
             }
         };
-        fetchData();
-    }, [isAdminView, targetUserId]);
+        fetchTrainerData();
+    }, [targetUserId, isAdminView]);
 
     const handleCreateChallenge = async (e) => {
         e.preventDefault();
@@ -103,30 +104,26 @@ const TrainerDashboard = ({ targetUserId = null }) => {
                             <span className="text-white">Trainer</span>
                             <span className="text-gradient">Dashboard</span>
                         </h1>
-                        <p className="text-dark-muted mt-1 text-lg">Manage your trainees and challenges</p>
+                        <p className="text-dark-muted mt-1">Management terminal and performance analytics</p>
                     </div>
-                    <div className="flex items-center gap-3 bg-primary/10 px-4 py-2 rounded-2xl border border-primary/20">
-                        <Star size={20} className="text-primary-light" />
-                        <span className="text-sm font-medium text-primary-200">
-                            Certified Trainer
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        {!isAdminView ? (
+                    {!isAdminView && (
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setShowChallengeModal(true)}
+                                className="btn-primary flex items-center gap-2 text-sm py-3 px-6"
+                            >
+                                <PlusCircle size={20} />
+                                Create Challenge
+                            </button>
                             <button
                                 onClick={handleLogout}
-                                className="p-2 rounded-xl bg-white/5 border border-white/10 text-red-400 hover:bg-red-500/10 transition-all"
+                                className="p-3 rounded-2xl bg-white/5 border border-white/10 text-red-400 hover:bg-red-400/10 transition-all"
                                 title="Sign Out"
                             >
                                 <LogOut size={20} />
                             </button>
-                        ) : (
-                            <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-xl text-primary-light font-bold text-sm">
-                                <Shield size={16} />
-                                Admin Performance View
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </header>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -159,24 +156,22 @@ const TrainerDashboard = ({ targetUserId = null }) => {
                     </div>
                 </div>
 
-                {!isAdminView && (
-                    <div className="flex gap-4 flex-wrap">
-                        <button
-                            onClick={() => setShowChallengeModal(true)}
-                            className="btn-primary flex items-center gap-2"
-                        >
-                            <PlusCircle size={18} />
-                            Create Challenge
-                        </button>
-                        <button
-                            onClick={() => setShowDietModal(true)}
-                            className="btn-secondary flex items-center gap-2"
-                        >
-                            <Utensils size={18} />
-                            Create Diet Plan
-                        </button>
-                    </div>
-                )}
+                <div className="flex gap-4 flex-wrap">
+                    <button
+                        onClick={() => setShowChallengeModal(true)}
+                        className="btn-primary flex items-center gap-2"
+                    >
+                        <PlusCircle size={18} />
+                        Create Challenge
+                    </button>
+                    <button
+                        onClick={() => setShowDietModal(true)}
+                        className="btn-secondary flex items-center gap-2"
+                    >
+                        <Utensils size={18} />
+                        Create Diet Plan
+                    </button>
+                </div>
 
                 {showChallengeModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">

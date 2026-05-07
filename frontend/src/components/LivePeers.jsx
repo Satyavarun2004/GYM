@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
-import { io } from 'socket.io-client';
 import { Users, Zap, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000'); // Dynamic Backend URL
+import socket from '../socket';
 
 const LivePeers = ({ currentUser }) => {
     const [peers, setPeers] = useState({});

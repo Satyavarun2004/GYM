@@ -131,6 +131,15 @@ const userSchema = mongoose.Schema({
     clanContribution: {
         type: Number,
         default: 0
+    },
+    subscription: {
+        plan: { type: String, enum: ['basic', 'pro'], default: 'basic' },
+        status: { type: String, enum: ['active', 'inactive'], default: 'inactive' },
+        startDate: { type: Date, default: Date.now }
+    },
+    isApproved: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

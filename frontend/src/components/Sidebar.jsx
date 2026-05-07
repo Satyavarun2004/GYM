@@ -1,19 +1,37 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Trophy, Activity, Award, LogOut, Menu, X, Zap, MessageCircle, Dumbbell, TrendingUp, Star, History, Bot } from 'lucide-react';
-import { useContext, useState } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import AuthContext from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import ChatModal from './ChatModal';
+import api from '../api/axios';
 
 const Sidebar = () => {
     const { user, logout } = useContext(AuthContext);
     const location = useLocation();
     const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
+    const [showSupportChat, setShowSupportChat] = useState(false);
+    const [adminUser, setAdminUser] = useState(null);
 
     const handleLogout = () => {
         logout();
         navigate('/');
     };
+
+    useEffect(() => {
+        if (user && user.role !== 'admin') {
+            const fetchAdmin = async () => {
+                try {
+                    const { data } = await api.get('/users/admin');
+                    setAdminUser(data);
+                } catch (error) {
+                    console.error('Failed to fetch support admin', error);
+                }
+            };
+            fetchAdmin();
+        }
+    }, [user]);
 
     const menuItems = [
         { name: 'Dashboard', icon: Home, path: '/dashboard' },
@@ -89,12 +107,32 @@ const Sidebar = () => {
                     <LogOut size={22} className="group-hover:translate-x-1 transition-transform" />
                     <span className="text-sm">Sign Out</span>
                 </button>
+
+                {user?.role !== 'admin' && adminUser && (
+                    <button
+                        onClick={() => setShowSupportChat(true)}
+                        className="flex items-center gap-4 w-full px-4 py-4 mb-2 rounded-2xl font-semibold text-primary-light bg-primary/10 hover:bg-primary/20 transition-all duration-300 group border border-primary/20 shadow-glow-purple"
+                    >
+                        <MessageCircle size={22} className="group-hover:scale-110 transition-transform" />
+                        <span className="text-sm">Support Chat</span>
+                    </button>
+                )}
+
+
             </div>
         </div>
     );
 
     return (
         <>
+            {/* Support Chat Modal (Rendered once globally) */}
+            {showSupportChat && adminUser && (
+                <ChatModal
+                    peer={adminUser}
+                    onClose={() => setShowSupportChat(false)}
+                />
+            )}
+
             {/* Desktop Sidebar */}
             <div className="hidden lg:block w-72 h-screen fixed left-0 top-0 bg-dark-bg/80 backdrop-blur-2xl border-r border-white/5 z-40">
                 <NavContent />

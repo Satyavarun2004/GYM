@@ -1,7 +1,18 @@
+import { useContext, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import AuthContext from '../context/AuthContext';
+import socket from '../socket';
 
 const Layout = () => {
+    const { user } = useContext(AuthContext);
+
+    useEffect(() => {
+        if (user?._id) {
+            socket.emit('join_room', user._id);
+        }
+    }, [user]);
+
     return (
         <div className="flex min-h-screen bg-dark-bg text-dark-text relative overflow-hidden font-sans">
             {/* Ambient Background Blur & Cyber Elements */}
